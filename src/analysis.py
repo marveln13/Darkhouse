@@ -67,3 +67,9 @@ def flow_bias(alerts):
         "net_bias": net_bias,
         "sweep_count": sum(1 for a in alerts if a.has_sweep),
     }
+
+
+def top_gamma_strikes(strike_gamma, source="vol", n=5):
+    """The n strikes with the largest absolute net dealer gamma -- the
+    strikes most likely to act as magnets or pivots intraday."""
+    return sorted(strike_gamma, key=lambda s: abs(s.net(source)), reverse=True)[:n]

@@ -113,6 +113,37 @@ class GexLevels:
 
 
 @dataclass
+class StrikeGamma:
+    strike: float
+    price: Optional[float]
+    time: Optional[str]
+    call_gamma_oi: float
+    call_gamma_vol: float
+    put_gamma_oi: float
+    put_gamma_vol: float
+
+    def net(self, source="vol"):
+        """Net dealer gamma at this strike. ASSUMES put gamma is already
+        signed negative in the API response -- the docs don't state the
+        sign convention, so verify against the first real response."""
+        if source == "oi":
+            return self.call_gamma_oi + self.put_gamma_oi
+        return self.call_gamma_vol + self.put_gamma_vol
+
+    @classmethod
+    def from_api(cls, raw):
+        return cls(
+            strike=_num(raw["strike"]),
+            price=_num(raw.get("price")),
+            time=raw.get("time"),
+            call_gamma_oi=_num(raw.get("call_gamma_oi")) or 0.0,
+            call_gamma_vol=_num(raw.get("call_gamma_vol")) or 0.0,
+            put_gamma_oi=_num(raw.get("put_gamma_oi")) or 0.0,
+            put_gamma_vol=_num(raw.get("put_gamma_vol")) or 0.0,
+        )
+
+
+@dataclass
 class FlowAlert:
     ticker: str
     created_at: str

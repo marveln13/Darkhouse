@@ -20,6 +20,8 @@ def cmd_scan(args):
     levels = darkpool.price_levels(client, args.ticker, date=args.date)
     gex_data = gex.gex_levels(client, args.ticker, date=args.date)
     alerts = flow.flow_alerts(client, ticker=args.ticker)
+    strikes = gex.spot_gex_by_strike(client, args.ticker, date=args.date)
+    top_strikes = analysis.top_gamma_strikes(strikes, source="vol", n=5)
 
     blocks = analysis.block_prints(prints, notional_floor=args.block_floor)
     confluence = analysis.price_level_confluence(levels, gex_data)
@@ -28,6 +30,10 @@ def cmd_scan(args):
     print(f"\n=== {args.ticker} -- Dark Pool + GEX Scan ({gex_data.date}) ===\n")
     print(f"GEX ({gex_data.source}): call_wall={gex_data.call_wall}  put_wall={gex_data.put_wall}  "
           f"gamma_flip={gex_data.gamma_flip}  gamma_magnet={gex_data.gamma_magnet}")
+    print("\nTop gamma strikes (net, volume basis):")
+    for s in top_strikes:
+        print(f"  ${s.strike:<9.2f} net {s.net('vol') / 1e6:>10,.1f}M  "
+              f"(call {s.call_gamma_vol / 1e6:,.1f}M / put {s.put_gamma_vol / 1e6:,.1f}M)")
     print(f"\nDark pool block prints (>= ${args.block_floor:,.0f} notional): {len(blocks)}")
     for b in blocks[:10]:
         print(f"  {b.executed_at}  {b.size:>8,} @ ${b.price:<10.2f}  ${b.notional:>14,.0f}  {b.market_center}")
@@ -42,7 +48,8 @@ def cmd_scan(args):
           f"{bias['sweep_count']} sweeps)")
 
     if args.html:
-        page = report.render_html(args.ticker, gex_data, levels, blocks, confluence, bias, args.block_floor)
+        page = report.render_html(args.ticker, gex_data, levels, blocks, confluence, bias,
+                                  args.block_floor, top_strikes=top_strikes)
         with open(args.html, "w", encoding="utf-8") as f:
             f.write(page)
         print(f"\nHTML report written to {args.html}")

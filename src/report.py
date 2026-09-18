@@ -97,8 +97,34 @@ def _confluence_table(confluence):
     )
 
 
-def render_html(ticker, gex, levels, blocks, confluence, bias, block_floor):
+def _strike_table(top_strikes, source):
+    if not top_strikes:
+        return '<p class="note">No per-strike gamma data.</p>'
+
+    def money(v):
+        return f'<td class="n {"bull" if v >= 0 else "bear"}">{"-" if v < 0 else ""}${abs(v) / 1e6:,.1f}M</td>'
+
+    rows = "".join(
+        f'<tr><td class="n">${s.strike:,.2f}</td>{money(s.net(source))}'
+        f'{money(s.call_gamma_vol if source == "vol" else s.call_gamma_oi)}'
+        f'{money(s.put_gamma_vol if source == "vol" else s.put_gamma_oi)}</tr>'
+        for s in top_strikes
+    )
+    return (
+        '<div class="wrap"><table><tr><th class="n">Strike</th><th class="n">Net gamma</th>'
+        '<th class="n">Call gamma</th><th class="n">Put gamma</th></tr>'
+        f'{rows}</table></div>'
+    )
+
+
+def render_html(ticker, gex, levels, blocks, confluence, bias, block_floor,
+                top_strikes=None, strike_source="vol"):
     tone = {"bullish": "bull", "bearish": "bear"}.get(bias["net_bias"], "")
+    strike_section = (
+        f'<section><h2>Top gamma strikes ({escape(strike_source)} basis)</h2>'
+        f'{_strike_table(top_strikes, strike_source)}</section>'
+        if top_strikes is not None else ""
+    )
     return f"""<!doctype html>
 <html lang="en"><head><meta charset="utf-8">
 <meta name="viewport" content="width=device-width,initial-scale=1">
@@ -108,6 +134,7 @@ def render_html(ticker, gex, levels, blocks, confluence, bias, block_floor):
 <p class="sub">{escape(str(gex.date))} &middot; GEX source: {escape(str(gex.source))} &middot; data: Unusual Whales API</p>
 
 <section><h2>Dark-pool ladder with GEX levels</h2>{_ladder(levels, gex)}</section>
+{strike_section}
 <section><h2>Level / GEX confluence</h2>{_confluence_table(confluence)}</section>
 <section><h2>Block prints (&ge; ${block_floor:,.0f} notional)</h2>{_blocks_table(blocks)}</section>
 <section><h2>Options flow bias</h2>

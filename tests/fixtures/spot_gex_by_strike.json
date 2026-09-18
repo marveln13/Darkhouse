@@ -1,0 +1,16 @@
+{
+  "data": [
+    {"strike": "435", "price": "441.50", "time": "2026-09-18T14:45:00Z",
+     "call_gamma_oi": "10000000", "call_gamma_vol": "20000000",
+     "put_gamma_oi": "-30000000", "put_gamma_vol": "-60000000"},
+    {"strike": "440", "price": "441.50", "time": "2026-09-18T14:45:00Z",
+     "call_gamma_oi": "500000000", "call_gamma_vol": "300000000",
+     "put_gamma_oi": "-400000000", "put_gamma_vol": "-100000000"},
+    {"strike": "445", "price": "441.50", "time": "2026-09-18T14:45:00Z",
+     "call_gamma_oi": "200000000", "call_gamma_vol": "150000000",
+     "put_gamma_oi": "-50000000", "put_gamma_vol": "-450000000"},
+    {"strike": "450", "price": "441.50", "time": "2026-09-18T14:45:00Z",
+     "call_gamma_oi": "450000000", "call_gamma_vol": "90000000",
+     "put_gamma_oi": "-50000000", "put_gamma_vol": "-10000000"}
+  ]
+}

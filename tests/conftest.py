@@ -33,5 +33,6 @@ def fake_client():
         "/api/darkpool/SPY": load_fixture("darkpool_ticker.json"),
         "/api/darkpool/SPY/price-levels": load_fixture("darkpool_price_levels.json"),
         "/api/stock/SPY/gex-levels": load_fixture("gex_levels.json"),
+        "/api/stock/SPY/spot-exposures/strike": load_fixture("spot_gex_by_strike.json"),
         "/api/option-trades/flow-alerts": load_fixture("flow_alerts.json"),
     })

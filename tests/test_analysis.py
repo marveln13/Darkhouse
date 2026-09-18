@@ -47,3 +47,13 @@ def test_flow_bias_handles_empty_input():
     bias = analysis.flow_bias([])
     assert bias["n"] == 0
     assert bias["net_bias"] == "flat"
+
+
+def test_top_gamma_strikes_ranks_by_absolute_net_and_respects_source(fake_client):
+    rows = gex.spot_gex_by_strike(fake_client, "SPY")
+
+    by_vol = analysis.top_gamma_strikes(rows, source="vol", n=2)
+    assert [r.strike for r in by_vol] == [445.0, 440.0]  # |-300M|, |200M|
+
+    by_oi = analysis.top_gamma_strikes(rows, source="oi", n=2)
+    assert [r.strike for r in by_oi] == [450.0, 445.0]   # 400M, 150M

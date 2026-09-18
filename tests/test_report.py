@@ -31,3 +31,24 @@ def test_report_escapes_untrusted_ticker(fake_client):
     page = _render(fake_client, ticker="<script>x</script>")
     assert "<script>x</script>" not in page
     assert "&lt;script&gt;" in page
+
+
+def test_report_includes_top_strikes_section_when_provided(fake_client):
+    prints = darkpool.ticker_prints(fake_client, "SPY")
+    levels = darkpool.price_levels(fake_client, "SPY")
+    gex_data = gex.gex_levels(fake_client, "SPY")
+    top = analysis.top_gamma_strikes(gex.spot_gex_by_strike(fake_client, "SPY"), n=2)
+
+    page = report.render_html(
+        "SPY", gex_data, levels, analysis.block_prints(prints),
+        analysis.price_level_confluence(levels, gex_data),
+        analysis.flow_bias(flow.flow_alerts(fake_client, ticker="SPY")),
+        200_000, top_strikes=top,
+    )
+
+    assert "Top gamma strikes (vol basis)" in page
+    assert "-$300.0M" in page   # strike 445 net, negative gamma shown as such
+
+
+def test_report_omits_strikes_section_when_not_provided(fake_client):
+    assert "Top gamma strikes" not in _render(fake_client)

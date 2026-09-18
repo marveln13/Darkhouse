@@ -41,6 +41,7 @@ All from `https://api.unusualwhales.com` (Bearer auth):
 - `GET /api/darkpool/{ticker}`
 - `GET /api/darkpool/{ticker}/price-levels`
 - `GET /api/stock/{ticker}/gex-levels`
+- `GET /api/stock/{ticker}/spot-exposures/strike`
 - `GET /api/option-trades/flow-alerts`
 
 ## Project layout
@@ -59,8 +60,20 @@ All from `https://api.unusualwhales.com` (Bearer auth):
 ## Status
 
 Scaffolded against Unusual Whales' documented API schema before a trial
-key existed. `src/darkpool.py`'s handling of whether list responses are
-wrapped in `{"data": [...]}` or returned bare is defensive (checks both)
-since the docs' operation pages didn't show a full example response —
-confirm against a real response once a key lands and simplify if needed.
-Not yet verified against live data.
+key existed. **Not yet verified against live data.** Checklist for the
+first real call:
+
+- `src/darkpool.py` / `src/flow.py` handle list responses wrapped in
+  `{"data": [...]}` or returned bare (the docs didn't show a full example
+  for every endpoint) - confirm and simplify.
+- `StrikeGamma.net()` assumes put gamma is returned already signed
+  negative. The docs don't state the sign convention - if puts come back
+  as positive magnitudes, net gamma and the "top strikes" ranking are wrong.
+- `spot_gex_by_strike` reads only the first page (500 rows); wide chains
+  may need `min_strike`/`max_strike` windowing or `page` pagination.
+- The confluence and flow-bias heuristics are unvalidated hypotheses, not
+  backtested edges.
+
+API terms: Unusual Whales data is personal-use only and may not be
+redistributed, so this repo ships only synthetic fixtures - never commit
+real API responses.
