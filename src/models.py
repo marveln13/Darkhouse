@@ -144,6 +144,21 @@ class StrikeGamma:
 
 
 @dataclass
+class DailyGreekExposure:
+    date: str
+    call_gamma: float
+    put_gamma: float
+
+    @classmethod
+    def from_api(cls, raw):
+        return cls(
+            date=raw["date"],
+            call_gamma=_num(raw.get("call_gamma")) or 0.0,
+            put_gamma=_num(raw.get("put_gamma")) or 0.0,
+        )
+
+
+@dataclass
 class FlowAlert:
     ticker: str
     created_at: str

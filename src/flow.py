@@ -2,7 +2,8 @@
 from .models import FlowAlert
 
 
-def flow_alerts(client, ticker=None, limit=100, min_premium=None, is_sweep=None, unusual=None):
+def flow_alerts(client, ticker=None, limit=100, min_premium=None, is_sweep=None, unusual=None,
+                newer_than=None, older_than=None):
     params = {"limit": limit}
     if ticker is not None:
         params["ticker_symbol"] = ticker
@@ -12,5 +13,9 @@ def flow_alerts(client, ticker=None, limit=100, min_premium=None, is_sweep=None,
         params["is_sweep"] = is_sweep
     if unusual is not None:
         params["unusual"] = unusual
+    if newer_than is not None:
+        params["newer_than"] = newer_than
+    if older_than is not None:
+        params["older_than"] = older_than
     raw = client.get("/api/option-trades/flow-alerts", params=params)
     return [FlowAlert.from_api(r) for r in raw.get("data", raw)]

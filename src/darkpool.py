@@ -16,7 +16,8 @@ def recent_prints(client, limit=100, min_premium=None, min_size=None, date=None)
     return [DarkPoolPrint.from_api(r) for r in raw.get("data", raw)]
 
 
-def ticker_prints(client, ticker, limit=500, min_premium=None, min_size=None, date=None):
+def ticker_prints(client, ticker, limit=500, min_premium=None, min_size=None, date=None,
+                  newer_than=None, older_than=None):
     params = {"limit": limit}
     if min_premium is not None:
         params["min_premium"] = min_premium
@@ -24,6 +25,10 @@ def ticker_prints(client, ticker, limit=500, min_premium=None, min_size=None, da
         params["min_size"] = min_size
     if date is not None:
         params["date"] = date
+    if newer_than is not None:
+        params["newer_than"] = newer_than
+    if older_than is not None:
+        params["older_than"] = older_than
     raw = client.get(f"/api/darkpool/{ticker}", params=params)
     return [DarkPoolPrint.from_api(r) for r in raw.get("data", raw)]
 

@@ -57,6 +57,22 @@ All from `https://api.unusualwhales.com` (Bearer auth):
   run `pytest`).
 - `main.py` — CLI (`scan <ticker>`, `recent`).
 
+## Comparing UW against ARGUS (optional)
+
+`compare/` tests whether UW data adds anything over what an existing
+trading system already records, using that system's own files read-only
+(`--argus-root`, default the sibling `ai-trading-desk-2` checkout):
+
+```bash
+python -m compare.run gex                                  # ThetaData-derived SPY GEX regime vs UW net gamma, ~120 days
+python -m compare.run darkpool --date 2026-09-18 --top 8   # do UW's prints contain the exchange-'D' >= $200k blocks the other system logged?
+python -m compare.run flow --dates 2026-09-16,2026-09-18   # daily options-flow direction, per ticker
+```
+
+Output is aggregate statistics only; raw UW responses are never saved.
+These measure *agreement*, not profitability -- whether the signals predict
+anything is a separate forward-returns test.
+
 ## Status
 
 Scaffolded against Unusual Whales' documented API schema before a trial
@@ -71,6 +87,12 @@ first real call:
   as positive magnitudes, net gamma and the "top strikes" ranking are wrong.
 - `spot_gex_by_strike` reads only the first page (500 rows); wide chains
   may need `min_strike`/`max_strike` windowing or `page` pagination.
+- `greek_exposure_history`'s `timeframe` values (YTD, 1D-2D, 1W-2W, 1M-2M,
+  1Y-2Y) come straight from the docs with no stated semantics -- check which
+  one returns Feb-Aug 2026 when the trial starts.
+- Dark-pool `premium` semantics are undocumented (the docs call it option
+  premium, which makes no sense for a stock print); notional is computed as
+  price x size instead, and the test fixtures' `premium` values are arbitrary.
 - The confluence and flow-bias heuristics are unvalidated hypotheses, not
   backtested edges.
 
