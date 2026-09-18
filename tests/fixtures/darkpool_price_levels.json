@@ -1,0 +1,8 @@
+{
+  "date": "2026-09-18",
+  "data": [
+    {"price": "440.00", "dark_pool_volume": 900000, "regular_volume": 100000},
+    {"price": "441.50", "dark_pool_volume": 50000, "regular_volume": 950000},
+    {"price": "445.00", "dark_pool_volume": 20000, "regular_volume": 30000}
+  ]
+}
