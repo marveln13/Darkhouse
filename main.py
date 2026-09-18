@@ -10,7 +10,7 @@ import sys
 from dotenv import load_dotenv
 
 from src.uw_client import UnusualWhalesClient, UnusualWhalesAuthError
-from src import darkpool, gex, flow, analysis
+from src import darkpool, gex, flow, analysis, report
 
 
 def cmd_scan(args):
@@ -41,6 +41,12 @@ def cmd_scan(args):
           f"(n={bias['n']}, bullish ${bias['bullish_premium']:,.0f} vs bearish ${bias['bearish_premium']:,.0f}, "
           f"{bias['sweep_count']} sweeps)")
 
+    if args.html:
+        page = report.render_html(args.ticker, gex_data, levels, blocks, confluence, bias, args.block_floor)
+        with open(args.html, "w", encoding="utf-8") as f:
+            f.write(page)
+        print(f"\nHTML report written to {args.html}")
+
 
 def cmd_recent(args):
     client = UnusualWhalesClient()
@@ -60,6 +66,7 @@ def main():
     scan.add_argument("ticker")
     scan.add_argument("--date", default=None)
     scan.add_argument("--block-floor", type=float, default=analysis.DEFAULT_BLOCK_NOTIONAL_FLOOR)
+    scan.add_argument("--html", default=None, help="Also write a self-contained HTML report to this path")
     scan.set_defaults(func=cmd_scan)
 
     recent = sub.add_parser("recent", help="Market-wide recent dark pool prints")
