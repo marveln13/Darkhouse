@@ -38,3 +38,14 @@ UNDERLYING_HORIZON_DAYS = 5
 CONTRACT_ENTRY = "next_day_open"        # D+1 open_price
 CONTRACT_EXIT_DAYS = 5                  # D+6 avg_price (five trading days after entry)
 BENCHMARK = "SPY"
+
+
+# ---- Addendum (still BEFORE any outcome was fetched): concrete pull parameters ----
+# Feasibility-driven and identical for every bucket, chosen after seeing only alert
+# COUNTS, never outcomes. A contract's /historic call returns its whole daily history,
+# so enrichment costs one call per unique contract, not per contract-day.
+DISCOVERY_FILTERS = {"min_premium": 50_000, "min_dte": 7, "max_dte": 90, "issue_types[]": ["Common Stock"]}
+DISCOVERY_START, DISCOVERY_END = "2025-09-19", "2026-09-17"
+ENRICH_MIN_ALERT_PREMIUM = 250_000     # a contract-day's summed alert premium; alerts understate the real day
+LEAKAGE_SAMPLE_FRAC, LEAKAGE_SEED = 0.05, 20260918   # seeded random slice of the excluded events, enriched
+                                                     # anyway to measure how many would have scored high
