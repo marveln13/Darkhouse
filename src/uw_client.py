@@ -9,6 +9,8 @@ import time
 import requests
 
 BASE_URL = "https://api.unusualwhales.com"
+# Client-id header UW's own agent guide (unusualwhales.com/skill.md) asks for on every request.
+CLIENT_API_ID = "100001"
 
 
 class UnusualWhalesAuthError(RuntimeError):
@@ -29,6 +31,7 @@ class UnusualWhalesClient:
         self.session.headers.update({
             "Authorization": f"Bearer {self.api_key}",
             "Accept": "application/json",
+            "UW-CLIENT-API-ID": CLIENT_API_ID,
         })
 
     def get(self, path, params=None):

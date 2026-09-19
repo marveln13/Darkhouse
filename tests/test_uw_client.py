@@ -19,3 +19,4 @@ def test_real_key_sets_bearer_header(monkeypatch):
     monkeypatch.setenv("UNUSUAL_WHALES_API_KEY", "real-trial-key-123")
     client = UnusualWhalesClient()
     assert client.session.headers["Authorization"] == "Bearer real-trial-key-123"
+    assert client.session.headers["UW-CLIENT-API-ID"] == "100001"

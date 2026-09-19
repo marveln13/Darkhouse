@@ -104,28 +104,49 @@ Expect a small confluence sample (it needs both signals at once), so only
 a large effect will be distinguishable from noise; a null result is a
 legitimate finding and is reported as one.
 
-## Status
+## Status and findings
 
-Scaffolded against Unusual Whales' documented API schema before a trial
-key existed. **Not yet verified against live data.** Checklist for the
-first real call:
+Verified against the live Unusual Whales API (2026-09-18). What the docs got
+wrong or left open, all fixed and covered by tests (`python -m
+scripts.first_call_check` re-verifies them):
 
-- `src/darkpool.py` / `src/flow.py` handle list responses wrapped in
-  `{"data": [...]}` or returned bare (the docs didn't show a full example
-  for every endpoint) - confirm and simplify.
-- `StrikeGamma.net()` assumes put gamma is returned already signed
-  negative. The docs don't state the sign convention - if puts come back
-  as positive magnitudes, net gamma and the "top strikes" ranking are wrong.
-- `spot_gex_by_strike` reads only the first page (500 rows); wide chains
-  may need `min_strike`/`max_strike` windowing or `page` pagination.
-- `greek_exposure_history`'s `timeframe` values (YTD, 1D-2D, 1W-2W, 1M-2M,
-  1Y-2Y) come straight from the docs with no stated semantics -- check which
-  one returns Feb-Aug 2026 when the trial starts.
-- Dark-pool `premium` semantics are undocumented (the docs call it option
-  premium, which makes no sense for a stock print); notional is computed as
-  price x size instead, and the test fixtures' `premium` values are arbitrary.
-- The confluence and flow-bias heuristics are unvalidated hypotheses, not
-  backtested edges.
+- Every endpoint wraps its payload in `{"data": ...}`; `gex-levels` nests its
+  fields inside `data` as a dict.
+- Dark-pool `premium` is price x size (stock notional).
+- Put gamma is signed negative (per-strike and daily), so net = call + put.
+- The strike endpoint's real default page is 50 rows of the *lowest* strikes;
+  `limit=500` is required (SPY returns 483 rows).
+- `greek-exposure` timeframes are single tokens (1D 2D 1W 2W 1M 2M 1Y 2Y YTD);
+  the docs' "1M-2M" style returns HTTP 422. Default = 1 year (250 rows).
+- Historical `date` queries work (verified back to 2025-10); GEX snapshots are
+  timestamped ~16:14 ET, i.e. end-of-day.
+
+**Finding 1 -- GEX regime agreement.** Over 120 days, ARGUS's ThetaData-derived
+SPY GEX sign and UW's net gamma agree on regime **77.5%** of the time (z = 6.0
+vs a coin flip); magnitudes correlate only weakly (r = 0.15). UW reads negative
+on 66% of days vs 52% for the ARGUS measure (which covers 0-7 DTE within +/-15%
+of spot) -- related, but not the same measurement.
+
+**Finding 2 -- the confluence hypothesis did not hold.** 250 sessions x SPY,
+QQQ, NVDA, TSLA (~400 confluence ticker-days), primary configuration fixed
+before looking at any price outcome:
+
+| level type | events | hold rate |
+|---|---|---|
+| dark-pool x GEX confluence | 605 | 53.8% |
+| dark-pool only | 1,992 | 49.7% |
+| GEX only | 683 | 51.1% |
+| placebo (shifted) | 841 | 51.3% |
+
+Confluence beats each control by 2-3 points, but t = 0.8-1.0 (p ~ 0.3-0.4).
+A 10-row robustness grid (`python -m research.sensitivity`; proximity,
+reaction size, horizon, level count, GEX basis) shows the same small positive
+sign in every row and no row reaching t = 2 (max t = 1.74). At this sample size
+only an effect of roughly 8 points or more would be detectable, so this is
+"no detectable effect", not proof of none. Note also that an early draft used a
+0.5% proximity, which made 61-70% of SPY/QQQ heavy levels "confluence" -- no
+distinct group -- so the primary definition is 0.1% (about one price bucket),
+chosen from level structure alone.
 
 API terms: Unusual Whales data is personal-use only and may not be
 redistributed, so this repo ships only synthetic fixtures - never commit
