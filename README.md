@@ -73,6 +73,37 @@ Output is aggregate statistics only; raw UW responses are never saved.
 These measure *agreement*, not profitability -- whether the signals predict
 anything is a separate forward-returns test.
 
+## Research: does confluence actually matter?
+
+The scanner's central idea -- a heavy dark-pool level lining up with a GEX
+level is a stronger read than either alone -- is a hypothesis. `research/`
+tests it as an event study:
+
+```bash
+python -m research.run --tickers SPY,QQQ,NVDA,TSLA --days 250
+```
+
+For each trading day D it pulls UW's dark-pool price levels and GEX levels,
+labels them (`confluence`, `dp_only`, `gex_only`, plus a `placebo` shifted
++/-0.75%), and measures how price reacts when it first touches each level
+on D+1: **hold** (rallies/falls 0.5 ATR off the level) vs **break** (goes
+0.5 ATR through it first). Design choices that guard against fooling
+ourselves:
+
+- Levels come from day D, reaction is measured on D+1 -- no lookahead.
+- ATR uses only bars before the touch; the touch bar is excluded from the
+  outcome window (its range trivially spans the level).
+- The unit of analysis is the ticker-day, not the level -- levels on the
+  same day are not independent.
+- Placebo levels show whether *any* level attracts reaction.
+- On real SPY/QQQ M30 bars with ordinary levels (prior-day high/low) the
+  harness returns hold rates of 45-51%, i.e. it does not manufacture an
+  edge from nothing.
+
+Expect a small confluence sample (it needs both signals at once), so only
+a large effect will be distinguishable from noise; a null result is a
+legitimate finding and is reported as one.
+
 ## Status
 
 Scaffolded against Unusual Whales' documented API schema before a trial
