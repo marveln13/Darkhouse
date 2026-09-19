@@ -43,3 +43,50 @@ def test_bad_inputs_fail_loudly():
         sizing.contracts("yolo", 100_000, 2.0)
     with pytest.raises(ValueError):
         sizing.contracts("full", 100_000, 0)
+
+
+def test_labels_use_the_users_vocabulary_with_full_and_above_being_heavy():
+    assert sizing.label(0.0020) == "lotto" and sizing.label(0.0025) == "lotto"
+    assert sizing.label(0.0040) == "lite_starter" and sizing.label(0.0050) == "lite_starter"
+    assert sizing.label(0.0080) == "half" and sizing.label(0.0100) == "half"
+    assert sizing.label(0.0150) == "scaling"
+    assert sizing.label(0.0200) == "heavy"                     # full size itself is heavy
+    assert sizing.label(0.0350) == "heavy"
+
+
+def test_lotto_is_a_quarter_percent_of_equity():
+    assert sizing.lotto_contracts(100_000, 1.00) == 2          # $250 budget / $100 per contract
+    assert sizing.lotto_contracts(100_000, 2.85) == 0          # too pricey to be a lotto in this account
+
+
+def test_scale_in_starts_with_one_or_two_and_adds_two_at_a_time_to_full():
+    # $100k at $2.85 -> full = 7 contracts
+    assert sizing.scale_in_plan(100_000, 2.85, first=1) == [1, 3, 5, 7]
+    assert sizing.scale_in_plan(100_000, 2.85, first=2) == [2, 4, 6, 7]     # last add trimmed 2 -> 1: no overshoot
+
+
+def test_a_fully_scaled_in_position_lands_on_full_size_which_is_heavy_and_never_beyond():
+    for premium in (0.90, 1.40, 2.85, 4.10):
+        for first in (1, 2):
+            plan = sizing.scale_in_plan(100_000, premium, first=first)
+            if plan:
+                assert plan[-1] == sizing.contracts("full", 100_000, premium)
+                assert plan[-1] * premium * 100 <= sizing.FULL_PCT * 100_000 + 1e-9
+                assert sizing.label_position(plan[-1], 100_000, premium) == "heavy"
+                assert all(sizing.label_position(n, 100_000, premium) != "heavy" for n in plan[:-1])
+
+
+def test_label_position_judges_full_by_contract_count_not_an_exact_two_percent():
+    assert 7 * 2.85 * 100 / 100_000 < sizing.FULL_PCT            # 1.995%: below 2.00% exactly...
+    assert sizing.label_position(7, 100_000, 2.85) == "heavy"    # ...but it IS full size
+    assert sizing.label_position(6, 100_000, 2.85) == "scaling"
+    assert sizing.label_position(8, 100_000, 2.85) == "heavy"    # above full
+    assert sizing.label_position(1, 100_000, 2.85) == "lite_starter"   # $285 = 0.285%
+    assert sizing.label_position(1, 100_000, 0.80) == "lotto"          # $80 = 0.08%
+    assert sizing.label_position(1, 4_000, 2.85) == "heavy"            # 7% of a small account
+
+
+def test_scale_in_is_empty_when_the_first_entry_alone_exceeds_full_size():
+    assert sizing.scale_in_plan(4_000, 2.85) == []
+    with pytest.raises(ValueError):
+        sizing.scale_in_plan(100_000, 2.85, first=3)
