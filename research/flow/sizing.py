@@ -20,7 +20,7 @@ FULL_PCT = 0.02
 SIZE_FRACTIONS = {"lite_starter": 0.25, "half": 0.5, "full": 1.0}
 CONTRACT_MULTIPLIER = 100
 # "Lottery ticket": small enough that a 100% loss doesn't matter. The user gave that as a tolerance,
-# not a number; 0.25% of equity (half a lite starter) is the working value -- to be confirmed.
+# not a number; 0.25% of equity (half a lite starter). Confirmed by the user 2026-09-19: "good for now".
 LOTTO_PCT = 0.0025
 ADD_CONTRACTS = 2            # every add while scaling in is 2 contracts
 FIRST_ENTRY_CHOICES = (1, 2)   # a scaled position starts with 1 or 2 contracts
