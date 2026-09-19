@@ -14,7 +14,7 @@ def block_prints(prints, notional_floor=DEFAULT_BLOCK_NOTIONAL_FLOOR):
     return sorted(blocks, key=lambda p: p.notional, reverse=True)
 
 
-def price_level_confluence(price_levels, gex, proximity_pct=0.5):
+def price_level_confluence(price_levels, gex, proximity_pct=0.1):
     """
     Real dark-pool price levels that sit within `proximity_pct`% of a GEX
     structural level (call wall / put wall / gamma flip / gamma magnet).
@@ -69,7 +69,11 @@ def flow_bias(alerts):
     }
 
 
-def top_gamma_strikes(strike_gamma, source="vol", n=5):
-    """The n strikes with the largest absolute net dealer gamma -- the
-    strikes most likely to act as magnets or pivots intraday."""
-    return sorted(strike_gamma, key=lambda s: abs(s.net(source)), reverse=True)[:n]
+def top_gamma_strikes(strike_gamma, source="vol", n=5, near_spot_pct=10.0):
+    """The n strikes with the largest absolute net dealer gamma within
+    +/-near_spot_pct of the underlying -- the strikes most likely to act as
+    magnets or pivots intraday. Far-OTM strikes are excluded because they
+    can't matter to today's price."""
+    near = [s for s in strike_gamma
+            if s.price is None or abs(s.strike - s.price) / s.price * 100.0 <= near_spot_pct]
+    return sorted(near, key=lambda s: abs(s.net(source)), reverse=True)[:n]

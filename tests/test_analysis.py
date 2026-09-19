@@ -57,3 +57,12 @@ def test_top_gamma_strikes_ranks_by_absolute_net_and_respects_source(fake_client
 
     by_oi = analysis.top_gamma_strikes(rows, source="oi", n=2)
     assert [r.strike for r in by_oi] == [450.0, 445.0]   # 400M, 150M
+
+
+def test_top_gamma_strikes_ignores_far_otm_strikes():
+    from src.models import StrikeGamma
+    near = StrikeGamma(strike=760.0, price=762.0, time=None, call_gamma_oi=1e6, call_gamma_vol=0,
+                       put_gamma_oi=-2e6, put_gamma_vol=0)
+    far = StrikeGamma(strike=100.0, price=762.0, time=None, call_gamma_oi=9e9, call_gamma_vol=0,
+                      put_gamma_oi=0, put_gamma_vol=0)
+    assert analysis.top_gamma_strikes([far, near], source="oi", n=5, near_spot_pct=10.0) == [near]

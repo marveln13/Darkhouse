@@ -21,7 +21,7 @@ from src.uw_client import UnusualWhalesClient
 from . import reaction
 from .bars import day_ranges, load_m30
 from .caching_client import CachingClient
-from .levels import label_levels
+from .levels import DEFAULT_PROXIMITY_PCT, label_levels
 
 REPO_ROOT = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 DEFAULT_ROOT = os.path.join(REPO_ROOT, "..", "ai-trading-desk-2")
@@ -39,7 +39,7 @@ def collect_events(client, ticker, bars, days, args):
         except (requests.HTTPError, KeyError):
             skipped += 1
             continue
-        labelled = label_levels(levels, gex_data, top_n=args.top_n)
+        labelled = label_levels(levels, gex_data, top_n=args.top_n, proximity_pct=args.proximity)
         events.extend(reaction.events_for_day(ticker, nxt, bars, ranges[nxt], labelled,
                                               k=args.k, horizon=args.horizon))
     return events, skipped
@@ -72,6 +72,7 @@ def main():
     ap.add_argument("--k", type=float, default=0.5, help="reaction size in ATRs")
     ap.add_argument("--horizon", type=int, default=4, help="M30 bars to wait for a reaction")
     ap.add_argument("--top-n", type=int, default=5, help="heavy dark-pool levels per day")
+    ap.add_argument("--proximity", type=float, default=DEFAULT_PROXIMITY_PCT, help="%% distance that counts as the same level")
     ap.add_argument("--gex-source", default="oi", choices=("oi", "vol"))
     args = ap.parse_args()
 

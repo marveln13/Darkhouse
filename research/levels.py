@@ -16,7 +16,14 @@ def _near(a, b, pct):
     return b != 0 and abs(a - b) / b * 100.0 <= pct
 
 
-def label_levels(price_levels, gex, top_n=5, proximity_pct=0.5, placebo_shift_pct=0.75):
+# Primary proximity = 0.1%, roughly one dark-pool price bucket ($0.76 on SPY).
+# Chosen from level STRUCTURE before any price outcome was examined: measured
+# on 40 real days, 0.5% made 61-70% of SPY/QQQ heavy levels "confluence" (no
+# distinct group), while 0.1% left it at 10-20% with sizeable controls.
+DEFAULT_PROXIMITY_PCT = 0.1
+
+
+def label_levels(price_levels, gex, top_n=5, proximity_pct=DEFAULT_PROXIMITY_PCT, placebo_shift_pct=0.75):
     heavy = sorted(price_levels.levels, key=lambda lv: lv.dark_pool_volume, reverse=True)[:top_n]
     gex_prices = [getattr(gex, f) for f in GEX_FIELDS if getattr(gex, f) is not None]
 

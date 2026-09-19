@@ -18,7 +18,7 @@ from dotenv import load_dotenv
 
 from src.uw_client import UnusualWhalesClient
 
-TIMEFRAMES = (None, "YTD", "1M-2M", "1Y-2Y")
+TIMEFRAMES = (None, "YTD", "1M", "1Y", "2Y")
 
 
 def shape(obj):
@@ -77,7 +77,7 @@ def main(client, ticker):
         print("  ", raw)
 
     def strikes():
-        raw = client.get(f"/api/stock/{ticker}/spot-exposures/strike")
+        raw = client.get(f"/api/stock/{ticker}/spot-exposures/strike", {"limit": 500})
         rows = rows_of(raw)
         print(f"  top-level: {shape(raw)}\n  rows returned: {len(rows)} (page cap 500)")
         print("  put_gamma_oi :", negative_share([fnum(r.get("put_gamma_oi")) for r in rows]))
@@ -86,7 +86,11 @@ def main(client, ticker):
 
     def greeks():
         for tf in TIMEFRAMES:
-            raw = client.get(f"/api/stock/{ticker}/greek-exposure", {"timeframe": tf} if tf else {})
+            try:
+                raw = client.get(f"/api/stock/{ticker}/greek-exposure", {"timeframe": tf} if tf else {})
+            except requests.HTTPError as e:
+                print(f"  timeframe={tf!s:<6} HTTP {e.response.status_code}")
+                continue
             rows = rows_of(raw)
             dates = sorted(r["date"] for r in rows) if rows else []
             print(f"  timeframe={tf!s:<6} rows={len(rows):>4}  {dates[0] if dates else '-'} .. {dates[-1] if dates else '-'}"

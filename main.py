@@ -38,8 +38,8 @@ def cmd_scan(args):
     for b in blocks[:10]:
         print(f"  {b.executed_at}  {b.size:>8,} @ ${b.price:<10.2f}  ${b.notional:>14,.0f}  {b.market_center}")
 
-    print(f"\nDark-pool price-level / GEX confluence (<=0.5% apart): {len(confluence)}")
-    for c in confluence:
+    print(f"\nDark-pool price-level / GEX confluence (<=0.1% apart): {len(confluence)}")
+    for c in confluence[:10]:
         print(f"  ${c['price']:.2f} near {c['gex_level']}=${c['gex_price']:.2f} "
               f"({c['distance_pct']}% away, {c['dark_pool_share_pct']}% dark-pool volume)")
 
