@@ -104,6 +104,37 @@ Expect a small confluence sample (it needs both signals at once), so only
 a large effect will be distinguishable from noise; a null result is a
 legitimate finding and is reported as one.
 
+## Flow conviction study (pre-registered)
+
+A human flow trader's judgment, turned into something testable. The Bay Street
+Bulls leader sizes entries off Unusual Whales flow ("14K contracts vs 900 OI, $4M,
+mostly ask-side ... keeping it lite"). `research/flow/` codifies the criteria visible
+in that call as a graded 0-9 **conviction score** on a contract's end-of-day stats
+(premium, volume vs open interest, ask-side share, floor share, single-leg, days to
+expiry, moderate OTM), then asks one question: **do higher scores earn better
+results?** The score, the outcome definitions (direction-signed stock return vs SPY,
+and the contract's own return), the statistics (winsorized means, day-clustered
+bootstrap, within-month permutation, first-half/second-half split) and every pull
+parameter were committed *before* any cross-event outcome was examined -- the git
+history is the pre-registration, and two defects found along the way (the UW API
+evaluates DTE filters relative to *today*, and its market-wide alert pager walks into
+earlier days) were fixed and logged before any outcome existed.
+
+```bash
+python -m research.flow.collect discover        # ~500k alerts, 12 months
+python -m research.flow.collect enrich --wait-for-reset
+python -m research.flow.analyze                 # prints every registered test, including failures
+python -m research.flow.card GOOGL261002C00355000 2026-09-10 --equity 100000
+```
+
+`card` renders one contract-day as an HTML card: the score component by component,
+plus a position-size vocabulary as a reference (lottery ticket 0.25%, lite starter
+0.5%, half 1%, full/heavy 2% of account equity; scale-in adds of 2 contracts).
+The score does not set size -- that link is only justified if the study supports it.
+
+Status: data pull in progress; results will be reported here as they come out,
+including a null result.
+
 ## Status and findings
 
 Verified against the live Unusual Whales API (2026-09-18). What the docs got

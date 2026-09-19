@@ -3,6 +3,7 @@ Roll UW flow alerts up to one EVENT per (ticker, contract, ET day): the unit a
 human flow trader actually reasons about ("$4M in the 10/02 355 calls today,
 mostly ask-side, 16x open interest").
 """
+import re
 from dataclasses import dataclass
 from datetime import date as date_cls, datetime
 
@@ -115,3 +116,28 @@ def aggregate_events(alerts):
             first_ts=first.created_at, first_price=first.price, underlying_price=first.underlying_price,
         ))
     return events
+
+
+_OSI = re.compile(r"^([A-Z.]{1,6})(\d{6})([CP])(\d{8})$")
+
+
+def parse_osi(chain):
+    """'GOOGL261002C00355000' -> ('GOOGL', date(2026,10,2), 'call', 355.0)."""
+    m = _OSI.match(chain)
+    if not m:
+        raise ValueError(f"not an OSI option symbol: {chain!r}")
+    root, yymmdd, cp, strike = m.groups()
+    expiry = date_cls(2000 + int(yymmdd[:2]), int(yymmdd[2:4]), int(yymmdd[4:]))
+    return root, expiry, "call" if cp == "C" else "put", int(strike) / 1000.0
+
+
+def event_from_contract_day(chain, day, row, underlying_price):
+    """A scoreable event straight from a contract's end-of-day row (no alert history needed)."""
+    ticker, expiry, kind, strike = parse_osi(chain)
+    eod = EodStats.from_row(row)
+    return FlowEvent(
+        ticker=ticker, chain=chain, date=day, type=kind, strike=strike, expiry=expiry.isoformat(),
+        dte=(expiry - date_cls.fromisoformat(day)).days, n_alerts=0, cum_premium=eod.total_premium,
+        ask_prem=0.0, bid_prem=0.0, max_vol_oi=eod.vol_oi or 0.0, open_interest=eod.open_interest,
+        sweeps=0, floors=0, multileg=eod.multileg_share >= 0.20, first_ts="", first_price=eod.last_price,
+        underlying_price=underlying_price, eod=eod)
