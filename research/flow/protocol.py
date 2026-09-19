@@ -52,6 +52,21 @@ BENCHMARK = "SPY"
 # The 7-90 day window is now applied client-side from each alert's own date.
 DISCOVERY_FILTERS = {"min_premium": 50_000, "issue_types[]": ["Common Stock"]}
 DISCOVERY_DTE = (7, 90)
+
+# ---- Addendum 2 (before ANY outcome was computed; enrichment had only fetched raw data) ----
+# Statistical details the protocol left open. Fixed now so none can be chosen after the fact.
+MIN_ENTRY_PRICE = 0.10          # contract entry (D+1 open) below $0.10: % returns are tick noise, excluded
+WINSOR = (0.01, 0.99)           # every outcome is winsorized at these quantiles before averaging
+# Headline statistic per outcome: winsorized mean of (high bucket) minus (low bucket); medians and hit
+# rates are reported alongside. Missing D+1 / D+6 contract rows exclude an event from outcome 2 (a
+# follower could not have been filled); exclusion counts are reported BY BUCKET so differential
+# attrition is visible. The half-spread haircut is (ask-bid)/(ask+bid) from D's last NBBO, paid on entry
+# and exit; if D's NBBO is missing or crossed, only the gross figure is reported for that event.
+# Inference: 2,000 day-level bootstrap resamples and 2,000 within-calendar-month score permutations
+# (both seeded), two-sided. Primary universe = events passing ENRICH_MIN_ALERT_PREMIUM; the seeded
+# leakage sample is used only to estimate what the cutoff excluded.
+BOOTSTRAP_RESAMPLES = PERMUTATIONS = 2_000
+STAT_SEED = 20260918
 DISCOVERY_START, DISCOVERY_END = "2025-09-19", "2026-09-17"
 ENRICH_MIN_ALERT_PREMIUM = 250_000     # a contract-day's summed alert premium; alerts understate the real day
 LEAKAGE_SAMPLE_FRAC, LEAKAGE_SEED = 0.05, 20260918   # seeded random slice of the excluded events, enriched
