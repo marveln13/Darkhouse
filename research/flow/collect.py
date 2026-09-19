@@ -2,7 +2,7 @@
 Resumable data collection for the flow conviction study.
 
     python -m research.flow.collect discover [--start D --end D]
-    python -m research.flow.collect enrich [--max-calls N]
+    python -m research.flow.collect enrich [--daily-cap 39000] [--wait-for-reset]
 
 Raw UW responses are cached under .cache/ (gitignored: UW data is personal-use,
 never committed), so every re-run is free and an interrupted run resumes.
@@ -11,6 +11,7 @@ import argparse
 import json
 import os
 import random
+import time
 from datetime import date as date_cls, datetime, timedelta
 
 from dotenv import load_dotenv
@@ -107,25 +108,46 @@ def enrichment_targets(events):
     return keep, sample
 
 
+def enrich_chains(client, chains, daily_cap, wait_for_reset=False, sleep=time.sleep, poll_seconds=300, log=print):
+    """Fetch each contract's /historic once. Cached contracts are skipped WITHOUT counting against
+    the quota. The UW daily counter (x-uw-daily-req-count) is read from the responses; at the cap it
+    either stops or polls until the quota resets. Returns the number of new fetches."""
+    inner, fetched = client.inner, 0
+    for chain in chains:
+        path = f"/api/option-contract/{chain}/historic"
+        if client.peek(path) is not None:
+            continue
+        while inner.daily_request_count >= daily_cap:
+            if not wait_for_reset:
+                log(f"daily quota {inner.daily_request_count} >= cap {daily_cap} after {fetched} new fetches -- "
+                    f"rerun after the reset")
+                return fetched
+            log(f"  quota {inner.daily_request_count}/{daily_cap}; checking again in {poll_seconds}s", )
+            sleep(poll_seconds)
+            try:
+                inner.get(path)          # one request refreshes the counter
+            except Exception:
+                pass
+        try:
+            client.get(path)
+            fetched += 1
+        except Exception as e:
+            log(f"  skip {chain}: {type(e).__name__} {str(e)[:60]}")
+        if fetched and fetched % 500 == 0:
+            log(f"  {fetched} new contracts fetched (quota {inner.daily_request_count}/{daily_cap})")
+    return fetched
+
+
 def cmd_enrich(args, client):
     events = load_events()
     keep, sample = enrichment_targets(events)
     chains = list(dict.fromkeys(e.chain for e in keep + sample))
+    cached = sum(1 for c in chains if client.peek(f"/api/option-contract/{c}/historic") is not None)
     print(f"{len(events)} contract-days | {len(keep)} pass the ${protocol.ENRICH_MIN_ALERT_PREMIUM:,} cutoff, "
-          f"{len(sample)} leakage sample | {len(chains)} unique contracts to enrich", flush=True)
-    calls = 0
-    for i, chain in enumerate(chains):
-        if calls >= args.max_calls:
-            print(f"call budget {args.max_calls} reached after {i} contracts -- rerun to resume")
-            return
-        try:
-            client.get(f"/api/option-contract/{chain}/historic")
-        except Exception as e:
-            print(f"  skip {chain}: {type(e).__name__} {str(e)[:60]}")
-        calls += 1
-        if i % 500 == 0:
-            print(f"  {i}/{len(chains)} contracts", flush=True)
-    print("enrichment done")
+          f"{len(sample)} leakage sample | {len(chains)} unique contracts, {cached} already cached", flush=True)
+    fetched = enrich_chains(client, chains, args.daily_cap, wait_for_reset=args.wait_for_reset)
+    remaining = sum(1 for c in chains if client.peek(f"/api/option-contract/{c}/historic") is None)
+    print(f"done: {fetched} new fetches, {remaining} contracts still missing (transient errors retry on rerun)")
 
 
 def main():
@@ -136,7 +158,8 @@ def main():
     d.add_argument("--end", default=protocol.DISCOVERY_END)
     d.set_defaults(func=cmd_discover)
     e = sub.add_parser("enrich")
-    e.add_argument("--max-calls", type=int, default=30_000)
+    e.add_argument("--daily-cap", type=int, default=39_000, help="stop/wait at this UW daily request count (limit 40,000)")
+    e.add_argument("--wait-for-reset", action="store_true", help="poll until the daily quota resets, then continue")
     e.set_defaults(func=cmd_enrich)
     args = ap.parse_args()
     client = UnusualWhalesClient()

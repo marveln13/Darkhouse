@@ -79,3 +79,60 @@ def test_enrichment_targets_keep_the_cutoff_and_sample_the_rest_reproducibly():
     assert 60 <= len(sample) <= 140                                    # ~5% of 2,000
     assert [e.chain for e in sample] == [e.chain for e in again[1]]    # seeded: same slice every run
     assert not any(e.cum_premium >= protocol.ENRICH_MIN_ALERT_PREMIUM for e in sample)
+
+
+class _Inner:
+    def __init__(self, start=0, reset_after_polls=None):
+        self.daily_request_count, self.gets, self.polls = start, [], 0
+        self.reset_after_polls = reset_after_polls
+
+    def get(self, path, params=None):
+        self.gets.append(path)
+        self.daily_request_count += 1
+        if self.reset_after_polls is not None and len(self.gets) >= self.reset_after_polls:
+            self.daily_request_count = 5           # the quota window rolled over
+        return {"chains": []}
+
+
+class _Cache:
+    def __init__(self, inner, cached=()):
+        self.inner, self.store = inner, {f"/api/option-contract/{c}/historic": {} for c in cached}
+
+    def peek(self, path, params=None):
+        return self.store.get(path)
+
+    def get(self, path, params=None):
+        self.store[path] = self.inner.get(path)
+        return self.store[path]
+
+
+def test_cached_contracts_are_skipped_and_never_spend_quota():
+    inner = _Inner()
+    cache = _Cache(inner, cached=["A", "B"])
+
+    fetched = collect.enrich_chains(cache, ["A", "B", "C"], daily_cap=100)
+
+    assert fetched == 1 and inner.gets == ["/api/option-contract/C/historic"]
+
+
+def test_enrichment_stops_at_the_daily_cap_and_leaves_the_rest_for_the_rerun():
+    inner = _Inner(start=38_998)
+    cache = _Cache(inner)
+    logs = []
+
+    fetched = collect.enrich_chains(cache, list("ABCDE"), daily_cap=39_000, log=logs.append)
+
+    assert fetched == 2 and len(inner.gets) == 2          # 38,998 -> 39,000, then it stops
+    assert any("rerun after the reset" in m for m in logs)
+
+
+def test_wait_for_reset_polls_then_resumes_when_the_counter_drops():
+    inner = _Inner(start=39_500, reset_after_polls=2)
+    cache = _Cache(inner)
+    sleeps = []
+
+    fetched = collect.enrich_chains(cache, ["A", "B"], daily_cap=39_000, wait_for_reset=True,
+                                    sleep=sleeps.append, poll_seconds=7, log=lambda m: None)
+
+    assert fetched >= 1 and sleeps and set(sleeps) == {7}
+    assert inner.daily_request_count < 39_000

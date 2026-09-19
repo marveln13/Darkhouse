@@ -27,6 +27,7 @@ class UnusualWhalesClient:
             )
         self.base_url = base_url
         self.timeout = timeout
+        self.daily_request_count = 0      # from the x-uw-daily-req-count header; limit is x-uw-token-req-limit
         self.session = requests.Session()
         self.session.headers.update({
             "Authorization": f"Bearer {self.api_key}",
@@ -41,5 +42,9 @@ class UnusualWhalesClient:
             retry_after = float(response.headers.get("Retry-After", 1))
             time.sleep(retry_after)
             response = self.session.get(url, params=params, timeout=self.timeout)
+        try:
+            self.daily_request_count = int(response.headers.get("x-uw-daily-req-count", self.daily_request_count))
+        except ValueError:
+            pass
         response.raise_for_status()
         return response.json()
