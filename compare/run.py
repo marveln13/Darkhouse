@@ -49,6 +49,7 @@ def cmd_darkpool(args, client):
         print(f"  ARGUS's detector looks DOWN this day (<{MIN_ALIVE_RTH_BLOCKS}) -- a comparison would measure the outage. Aborting.")
         return
 
+    alive = argus_logs.alive_minutes(day)
     counts = {}
     for b in day:
         counts[b["ticker"]] = counts.get(b["ticker"], 0) + 1
@@ -61,8 +62,12 @@ def cmd_darkpool(args, client):
             continue
         price = statistics.median(b["price"] for b in mine)
         min_size = int(0.9 * dark_pool_match.DEFAULT_MIN_NOTIONAL / price)
-        uw = uw_fetch.fetch_dark_pool_day(client, t, args.date, min_size=min_size)
+        uw = uw_fetch.fetch_dark_pool_day(client, t, args.date, min_size=min_size, max_pages=args.max_pages)
+        uw = [p for p in uw if uw_fetch._dt(p.executed_at).astimezone(argus_logs.ET).strftime("%Y-%m-%d %H:%M") in alive]
         r = dark_pool_match.match_blocks(mine, uw)
+        earliest_uw = min((uw_fetch._dt(p.executed_at) for p in uw), default=None)
+        if earliest_uw is not None and (earliest_uw - min(b["dt"] for b in mine)).total_seconds() > 300:
+            print(f"  WARNING {t}: UW fetch stopped at the page cap (earliest print {earliest_uw:%H:%M:%S} UTC) -- rates below are understated")
         lag = "n/a" if r["median_lag_s"] is None else f"{r['median_lag_s']:.1f}s"
         print(f"  {t:<6} ARGUS {r['n_argus']:>6}  UW>=$200k {r['n_uw']:>6}  matched {r['n_matched']:>6}  "
               f"ARGUS-covered {_pct(r['argus_match_rate'])}  UW-covered {_pct(r['uw_match_rate'])}  median lag {lag}")
@@ -95,7 +100,7 @@ def main():
 
     g = sub.add_parser("gex"); g.add_argument("--timeframe", default=None); g.set_defaults(func=cmd_gex)
     d = sub.add_parser("darkpool"); d.add_argument("--date", required=True)
-    d.add_argument("--tickers"); d.add_argument("--top", type=int, default=8); d.set_defaults(func=cmd_darkpool)
+    d.add_argument("--tickers"); d.add_argument("--top", type=int, default=8); d.add_argument("--max-pages", type=int, default=60); d.set_defaults(func=cmd_darkpool)
     f = sub.add_parser("flow"); f.add_argument("--dates", required=True)
     f.add_argument("--tickers"); f.set_defaults(func=cmd_flow)
 

@@ -177,3 +177,32 @@ def test_dark_pool_pagination_respects_page_cap():
     client = PagingClient([_raw(i, minute=i // 60) for i in range(100)])
     out = uw_fetch.fetch_dark_pool_day(client, "SPY", "2026-09-18", page_limit=10, max_pages=2)
     assert len(out) == 20 and client.calls == 2
+
+
+def _raw_on(date, i, hour=14, minute=0, tid=None):
+    return {"ticker": "SPY", "executed_at": f"{date}T{hour:02d}:{minute:02d}:{i % 60:02d}.{i:06d}Z",
+            "price": "750.00", "size": 300, "premium": "225000", "volume": 1, "market_center": "L",
+            "canceled": False, "tracking_id": i if tid is None else tid}
+
+
+def test_dark_pool_fetch_stops_at_the_requested_day_instead_of_walking_into_prior_days():
+    day = [_raw_on("2026-09-18", i, minute=i // 60) for i in range(15)]
+    prior = [_raw_on("2026-09-17", 100 + i, minute=i // 60) for i in range(15)]
+    client = PagingClient(day + prior)
+
+    out = uw_fetch.fetch_dark_pool_day(client, "SPY", "2026-09-18", page_limit=10)
+
+    assert {p.executed_at[:10] for p in out} == {"2026-09-18"} and len(out) == 15
+    assert client.calls == 2                       # 2nd page reaches 9/17 -> stop; no 3rd page
+
+
+def test_dark_pool_fetch_keeps_distinct_prints_that_share_a_tracking_id():
+    a = _raw_on("2026-09-18", 1, tid=7)
+    b = _raw_on("2026-09-18", 2, tid=7)            # same tracking_id, different print
+    out = uw_fetch.fetch_dark_pool_day(PagingClient([a, b]), "SPY", "2026-09-18", page_limit=10)
+    assert len(out) == 2
+
+
+def test_alive_minutes_marks_only_minutes_where_the_detector_logged_something():
+    blocks = [_block("SPY", 1, 1, _utc(14, 0, 5)), _block("QQQ", 1, 1, _utc(14, 0, 40)), _block("SPY", 1, 1, _utc(14, 3, 1))]
+    assert argus_logs.alive_minutes(blocks) == {"2026-09-18 10:00", "2026-09-18 10:03"}   # 10:01, 10:02 = detector down

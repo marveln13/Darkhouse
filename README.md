@@ -120,6 +120,11 @@ scripts.first_call_check` re-verifies them):
   the docs' "1M-2M" style returns HTTP 422. Default = 1 year (250 rows).
 - Historical `date` queries work (verified back to 2025-10); GEX snapshots are
   timestamped ~16:14 ET, i.e. end-of-day.
+- On the dark-pool endpoint, once `older_than` is set the API stops honouring
+  `date`: a pager asking for one day walks back into earlier days (asking for
+  9/18 returned 9/15-9/18) and `tracking_id` is not unique per print. The
+  fetcher filters to the requested ET date, stops at the day boundary, and
+  dedupes on (time, size, price, id).
 
 **Finding 1 -- GEX regime agreement.** Over 120 days, ARGUS's ThetaData-derived
 SPY GEX sign and UW's net gamma agree on regime **77.5%** of the time (z = 6.0
@@ -147,6 +152,26 @@ only an effect of roughly 8 points or more would be detectable, so this is
 0.5% proximity, which made 61-70% of SPY/QQQ heavy levels "confluence" -- no
 distinct group -- so the primary definition is 0.1% (about one price bucket),
 chosen from level structure alone.
+
+**Finding 3 -- cross-source validation of an existing dark-pool detector.**
+ARGUS logs every off-exchange (SIP exchange `D`) print of $200k+ notional from
+Alpaca's live stream. Against UW's dark-pool feed on two sessions (8 tickers,
+regular hours, minutes when the detector was down excluded): 95-97% of the
+detector's blocks appear in UW's feed (same size, price within 2 cents, time
+within 5 s, median lag 0.5 s), and it captured 93.6% of UW's $200k+ prints on a
+healthy day. Spot checks against Alpaca's own historical tape (5-minute
+windows) agree to within 5-9%. The comparison also exposed a real bug: an emoji
+in a console print raised `UnicodeEncodeError` when output was redirected to a
+file, which aborted trade batches and reconnected the websocket 74,200 times in
+one session. It cost about 5 points of coverage overall (7-11 on SPY/QQQ, where
+trades arrive in bursts) and is fixed. Neither feed is a discrete "block"
+filter: both list 100+ prints of $200k+ per minute in regular hours.
+
+**Finding 4 -- options-flow direction: no agreement.** Per ticker-day, the sign
+of ARGUS's delta-weighted net aggressor flow (all trades) versus UW's
+premium-weighted flow-alert tilt (rule-filtered alerts) agreed 44.4% of the time
+(90 ticker-days, z = -1.05, r = -0.11). They measure different things, so this
+says the two are not redundant, not that either is wrong.
 
 API terms: Unusual Whales data is personal-use only and may not be
 redistributed, so this repo ships only synthetic fixtures - never commit

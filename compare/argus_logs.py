@@ -72,3 +72,11 @@ def regular_hours_counts_by_day(blocks):
         if is_regular_hours(b["dt"]):
             counts[et_date(b["dt"])] = counts.get(et_date(b["dt"]), 0) + 1
     return counts
+
+
+def alive_minutes(blocks):
+    """ET minutes in which ARGUS logged at least one block on ANY ticker. The
+    detector normally logs ~100/min across ~116 tickers, so an empty minute
+    means it was down (e.g. the 2026-09-16 power outage), not that nothing
+    traded -- comparing UW against those minutes would measure the outage."""
+    return {b["dt"].astimezone(ET).strftime("%Y-%m-%d %H:%M") for b in blocks}

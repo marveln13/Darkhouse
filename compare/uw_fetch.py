@@ -14,18 +14,28 @@ def _dt(iso):
     return datetime.fromisoformat(iso.replace("Z", "+00:00"))
 
 
+def _print_key(p):
+    # tracking_id alone is NOT unique per print (verified live), so it can't be the dedupe key.
+    return (p.executed_at, p.size, p.price, p.tracking_id)
+
+
 def fetch_dark_pool_day(client, ticker, date, min_size=None, page_limit=500, max_pages=20):
+    """Regular-hours prints for one ET date. Verified live: once `older_than`
+    is set the API stops honouring `date`, so a naive pager walks back into
+    prior days (asking for 9/18 returned 9/15-9/18) -- results are filtered to
+    `date` and paging stops as soon as a page reaches an earlier day."""
     seen, out, cursor = set(), [], None
     for _ in range(max_pages):
         page = darkpool.ticker_prints(client, ticker, limit=page_limit, min_size=min_size,
                                       date=date, older_than=cursor)
-        fresh = [p for p in page if p.tracking_id not in seen]
-        seen.update(p.tracking_id for p in fresh)
-        out.extend(p for p in fresh if is_regular_hours(_dt(p.executed_at)))
+        fresh = [p for p in page if _print_key(p) not in seen]
+        seen.update(_print_key(p) for p in fresh)
+        out.extend(p for p in fresh
+                   if et_date(_dt(p.executed_at)) == date and is_regular_hours(_dt(p.executed_at)))
         if len(page) < page_limit or not fresh:
             break
         new_cursor = min(p.executed_at for p in page)
-        if new_cursor == cursor:
+        if new_cursor == cursor or et_date(_dt(new_cursor)) < date:
             break
         cursor = new_cursor
     return out

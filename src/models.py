@@ -28,6 +28,10 @@ class DarkPoolPrint:
     nbbo_bid: Optional[float]
     nbbo_ask: Optional[float]
     tracking_id: int
+    sale_cond_codes: Optional[str] = None
+    trade_code: Optional[str] = None
+    trade_settlement: Optional[str] = None
+    ext_hour_sold_codes: Optional[str] = None
 
     @property
     def notional(self):
@@ -47,6 +51,10 @@ class DarkPoolPrint:
             nbbo_bid=_num(raw.get("nbbo_bid")),
             nbbo_ask=_num(raw.get("nbbo_ask")),
             tracking_id=int(raw["tracking_id"]),
+            sale_cond_codes=raw.get("sale_cond_codes"),
+            trade_code=raw.get("trade_code"),
+            trade_settlement=raw.get("trade_settlement"),
+            ext_hour_sold_codes=raw.get("ext_hour_sold_codes"),
         )
 
 
