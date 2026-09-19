@@ -186,6 +186,7 @@ class FlowAlert:
     has_floor: bool
     has_multileg: bool
     alert_rule: str
+    option_chain: Optional[str] = None
 
     @property
     def is_bullish_skewed(self):
@@ -218,4 +219,5 @@ class FlowAlert:
             has_floor=bool(raw.get("has_floor", False)),
             has_multileg=bool(raw.get("has_multileg", False)),
             alert_rule=raw.get("alert_rule", ""),
+            option_chain=raw.get("option_chain"),
         )
