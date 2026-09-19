@@ -40,6 +40,18 @@ def test_discover_day_stops_at_the_day_boundary_instead_of_walking_into_earlier_
     assert client.calls <= 4          # 3 full pages of the day, then at most one page that crosses into 9/09
 
 
+def test_dte_window_is_applied_from_the_alerts_own_date_not_todays_date():
+    """The live API's server-side DTE filter is relative to TODAY, which silently kept only LEAPS on old days."""
+    near = _raw("2026-01-15T15:00:00Z", chain="AAA260117C00100000")     # expires 2 days after the alert
+    mid = dict(_raw("2026-01-15T15:01:00Z", chain="AAA260220C00100000"), expiry="2026-02-20")       # 36 DTE
+    far = dict(_raw("2026-01-15T15:02:00Z", chain="AAA271217C00100000"), expiry="2027-12-17")       # ~700 DTE
+    near["expiry"] = "2026-01-17"
+
+    out = collect.discover_day(StreamClient([near, mid, far]), "2026-01-15", page_limit=10, filters={})
+
+    assert [r["option_chain"] for r in out] == ["AAA260220C00100000"]
+
+
 def test_discover_day_dedupes_repeated_rows():
     r = _raw("2026-09-10T14:00:00Z")
     out = collect.discover_day(StreamClient([r, dict(r)]), "2026-09-10", page_limit=10, filters={})

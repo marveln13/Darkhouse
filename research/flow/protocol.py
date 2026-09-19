@@ -44,7 +44,14 @@ BENCHMARK = "SPY"
 # Feasibility-driven and identical for every bucket, chosen after seeing only alert
 # COUNTS, never outcomes. A contract's /historic call returns its whole daily history,
 # so enrichment costs one call per unique contract, not per contract-day.
-DISCOVERY_FILTERS = {"min_premium": 50_000, "min_dte": 7, "max_dte": 90, "issue_types[]": ["Common Stock"]}
+#
+# AMENDMENT (still before any outcome): the first pull used the API's min_dte/max_dte.
+# Verified live that the server evaluates DTE relative to TODAY, not the alert's date:
+# on 2025-10-15 it removed 99% of alerts (4,968 -> 39), keeping only contracts that had
+# not yet expired (LEAPS), so older months would have been a different population.
+# The 7-90 day window is now applied client-side from each alert's own date.
+DISCOVERY_FILTERS = {"min_premium": 50_000, "issue_types[]": ["Common Stock"]}
+DISCOVERY_DTE = (7, 90)
 DISCOVERY_START, DISCOVERY_END = "2025-09-19", "2026-09-17"
 ENRICH_MIN_ALERT_PREMIUM = 250_000     # a contract-day's summed alert premium; alerts understate the real day
 LEAKAGE_SAMPLE_FRAC, LEAKAGE_SEED = 0.05, 20260918   # seeded random slice of the excluded events, enriched

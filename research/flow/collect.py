@@ -45,7 +45,9 @@ def discover_day(client, date, page_limit=200, max_pages=40, filters=None):
             key = (r["created_at"], r["option_chain"], r["total_premium"], r["total_size"])
             if key not in seen and et_date(_dt(r["created_at"])) == date:
                 seen.add(key)
-                out.append(r)
+                dte = (date_cls.fromisoformat(r["expiry"]) - date_cls.fromisoformat(date)).days
+                if protocol.DISCOVERY_DTE[0] <= dte <= protocol.DISCOVERY_DTE[1]:
+                    out.append(r)
         if len(rows) < page_limit:
             break
         oldest = min(r["created_at"] for r in rows)
@@ -137,7 +139,9 @@ def main():
     e.add_argument("--max-calls", type=int, default=30_000)
     e.set_defaults(func=cmd_enrich)
     args = ap.parse_args()
-    client = CachingClient(UnusualWhalesClient(), os.path.join(REPO_ROOT, ".cache", "uw"))
+    client = UnusualWhalesClient()
+    if args.command == "enrich":     # small per-contract responses; discovery has its own per-day cache
+        client = CachingClient(client, os.path.join(REPO_ROOT, ".cache", "uw"))
     args.func(args, client)
 
 
