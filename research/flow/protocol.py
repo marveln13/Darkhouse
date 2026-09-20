@@ -65,6 +65,9 @@ WINSOR = (0.01, 0.99)           # every outcome is winsorized at these quantiles
 # Inference: 2,000 day-level bootstrap resamples and 2,000 within-calendar-month score permutations
 # (both seeded), two-sided. Primary universe = events passing ENRICH_MIN_ALERT_PREMIUM; the seeded
 # leakage sample is used only to estimate what the cutoff excluded.
+# Addendum 3 (the first analysis run crashed BEFORE computing any statistic): real /historic rows can carry
+# null price fields (days with no usable trade). Such a row is treated exactly like a missing row -- excluded
+# from outcome 2 with status "no_price", counted by bucket in the attrition report.
 BOOTSTRAP_RESAMPLES = PERMUTATIONS = 2_000
 STAT_SEED = 20260918
 DISCOVERY_START, DISCOVERY_END = "2025-09-19", "2026-09-17"

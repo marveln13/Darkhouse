@@ -46,6 +46,8 @@ def contract_outcome(date, rows_by_date, cal, index, exit_days=protocol.CONTRACT
     er, xr = rows_by_date.get(entry_day), rows_by_date.get(exit_day)
     if er is None or xr is None:
         return {"status": "no_row"}
+    if er.get("open_price") is None or xr.get("avg_price") is None:
+        return {"status": "no_price"}          # a row with null prices is a day with no usable trade
     entry, exit_ = float(er["open_price"]), float(xr["avg_price"])
     if entry < protocol.MIN_ENTRY_PRICE:
         return {"status": "sub_dime"}

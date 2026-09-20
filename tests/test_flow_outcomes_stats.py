@@ -48,6 +48,15 @@ def test_contract_outcome_statuses():
     assert at_floor["status"] == "ok"                                        # the floor itself is allowed
 
 
+def test_null_price_fields_are_an_excluded_status_not_a_crash():
+    rows = _rows()
+    rows["2026-09-10"]["avg_price"] = None                      # exit day with no usable trade
+    assert outcomes.contract_outcome("2026-09-01", rows, CAL, IDX)["status"] == "no_price"
+    rows = _rows()
+    rows["2026-09-02"]["open_price"] = None                     # entry day with no usable trade
+    assert outcomes.contract_outcome("2026-09-01", rows, CAL, IDX)["status"] == "no_price"
+
+
 def test_a_crossed_or_missing_nbbo_leaves_net_unreported_but_keeps_gross():
     crossed = outcomes.contract_outcome("2026-09-01", _rows(bid=2.2, ask=2.0), CAL, IDX)
     assert crossed["status"] == "ok" and crossed["net"] is None and crossed["gross"] == pytest.approx(0.5)
