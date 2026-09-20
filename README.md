@@ -132,8 +132,35 @@ plus a position-size vocabulary as a reference (lottery ticket 0.25%, lite start
 0.5%, half 1%, full/heavy 2% of account equity; scale-in adds of 2 contracts).
 The score does not set size -- that link is only justified if the study supports it.
 
-Status: data pull in progress; results will be reported here as they come out,
-including a null result.
+**Result (the first and only pre-registered run, 2026-09-19): null.** 58,386 directional
+contract-days over 12 months (95,263 passed the premium cutoff; 38% had no side dominance
+and were not directional). Higher conviction did not earn better results:
+
+| conviction | events | underlying, 5-day excess return vs SPY (direction-signed) | buy the contract, gross | buy the contract, net of half-spread |
+|---|---|---|---|---|
+| low (0-3) | 17,506 | +0.07% | -4.5% | -12.0% |
+| mid (4-6) | 38,639 | +0.02% | -4.2% | -11.6% |
+| high (7-9) | 2,241 | -0.23% | -3.1% | -13.2% |
+
+High minus low: -0.28% (95% CI -0.72% to +0.12%, permutation p = 0.16) on the underlying;
+-1.0% (CI -7.4% to +6.1%, p = 0.76) gross; -2.9% (CI -8.9% to +3.8%, p = 0.37) net.
+Spearman(score, outcome) = -0.01 / -0.07; first- and second-half results do not agree in
+sign for the contract outcomes. Reading it plainly:
+
+- **The score does not predict outcomes**, and neither does the flow direction itself:
+  the hit rate of direction-signed underlying returns is about 50% in every bucket.
+- **Following the flow by buying the same contract loses on average** (median -15% to
+  -30% gross), with no improvement at higher conviction. Time decay and spread dominate.
+- The one bound worth stating: on the underlying the upper end of the high-minus-low CI is
+  only +0.12% per event, so a real positive dose-response bigger than that is unlikely
+  at this horizon. On contract returns the CIs are wide (about +/-7 points).
+
+Caveats: attrition differs by bucket (about 20% of low-score, 12% of high-score
+ask-dominant events had no usable D+1/D+6 contract row); the net figure uses D's closing
+NBBO and is probably pessimistic; the cutoff excluded an estimated ~27% of high-score
+events (a seeded sample measured it); one horizon (5 days) and one year of data.
+"No detectable effect" is not proof of none, and the leader's edge, if any, may live in
+what a mechanical score cannot see: catalysts, ticker selection, exits and sizing.
 
 ## Status and findings
 
