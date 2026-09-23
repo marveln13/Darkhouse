@@ -241,6 +241,7 @@ def standalone_svg(chart, width=960, height=440):
     """The chart as a self-contained .svg file (for a README image): same drawing, styles embedded, no script."""
     html = render_chart_svg(chart, width, height)
     start, end = html.index("<svg"), html.index("</svg>") + len("</svg>")
-    svg = html[start:end].replace("<svg ", '<svg xmlns="http://www.w3.org/2000/svg" ', 1)
+    svg = html[start:end].replace(
+        "<svg ", f'<svg xmlns="http://www.w3.org/2000/svg" width="{width}" height="{height}" ', 1)
     style = (CHART_CSS.replace(":root", "svg") + _STANDALONE_TOKENS).replace(".bl-chart ", "")
     return svg.replace(">", f"><style>{style}</style>", 1)

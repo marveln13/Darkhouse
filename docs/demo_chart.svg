@@ -1,4 +1,4 @@
-<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 960 440" role="img" aria-label="Price with dark-pool and GEX levels" class="bl-chart" preserveAspectRatio="xMidYMid meet"><style>
+<svg xmlns="http://www.w3.org/2000/svg" width="960" height="440" viewBox="0 0 960 440" role="img" aria-label="Price with dark-pool and GEX levels" class="bl-chart" preserveAspectRatio="xMidYMid meet"><style>
 svg{--up:#15803d;--down:#b91c1c;--dp:#3b6fd4;--conf:#7c3aed;--blk:#d97706;--grid:#e6e9ef}
 @media (prefers-color-scheme:dark){svg{--up:#4ade80;--down:#f87171;--dp:#6b9bf5;--conf:#c084fc;--blk:#fbbf24;--grid:#252b35}}
 .chartwrap{position:relative;overflow-x:auto}

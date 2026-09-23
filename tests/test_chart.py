@@ -249,5 +249,5 @@ def test_truncation_note_is_shown_on_the_chart():
 def test_standalone_svg_is_self_contained():
     c = chart.build_chart(CANDLES, _levels((100.2, 500)), _gex(call_wall=101.3), [], [])
     svg = chart.standalone_svg(c)
-    assert svg.startswith('<svg xmlns="http://www.w3.org/2000/svg"') and svg.endswith("</svg>")
+    assert svg.startswith('<svg xmlns="http://www.w3.org/2000/svg" width="960" height="440"') and svg.endswith("</svg>")
     assert "<style>" in svg and "<script" not in svg and "--dp:" in svg
