@@ -75,4 +75,23 @@ recorded; it has not been looked at and will not be until this study has run.
 - Neither SUPPORTED (or UNDERPOWERED) -> UW research ends; the hackathon submission stands as it is.
 
 ## Addenda log
-(none yet)
+
+### Addendum 1 -- 2026-09-23 (user decision: use the LIVE ORB UP)
+Written before this study's code exists, before any UW data is fetched for it and before any outcome is split by regime. The
+ORB UP population above is REPLACED by the live ORB UP, exactly as pinned in `research/argus_filter/PREREGISTRATION.md`
+Addendum 0:
+- Signals: ARGUS `backtest/test_orb_premarket_confluence_gap_and_go_only.detect_gap_and_go_signals(ticker, bars)` on the cached
+  M15 bars (`backtest/test_orb.load_cached`): gap_pct >= GAP_AND_GO_CALLS_THRESHOLD_PCT (0.5), the first close above the
+  first bar's high at breakout bar index >= 3, at most one signal per ticker-day; entry = the breakout close, stop = the first
+  bar's low.
+- Live pre-market gate (`PREMARKET_CONFLUENCE_ENABLED = True` in `detection/orb_engine.py`): keep only signals that ARGUS's
+  own `tag_confluence` (`backtest/test_orb_premarket_confluence_real.py`) marks `_confluence = True` -- the breakout close is
+  above that day's real Alpaca pre-market high. Pre-market ranges come from ARGUS's `AlpacaDataFeed.get_premarket_ranges`,
+  one call per signal date, cached locally (gitignored). A signal with no pre-market data is excluded and counted.
+- Outcome: `simulate_trade(bars, ts_list, idx, "up", entry, stop, 2.5, max_bars_forward=26)` with idx = bisect_right(ts_list,
+  signal_ts) - 1 (as in ARGUS `backtest/test_m30i_puts_orb_up_confluence.simulate_orb`). 2.5R is the live automated take-profit.
+- Same frozen 95-ticker universe; window bounded by the M15 cache (2025-07-08..2026-08-14) and the UW history.
+- Consequence, stated: the ORB UP result is no longer directly comparable with the VIX1D study's ORB population (that study
+  used `detect_orb_signals_with_levels` at 2R). The VIX1D secondary still uses the VIX1D study's bucket definition.
+- Nothing else changes: the M30i PUTS population, regime, hypotheses (H2 now reads "live ORB UP"), statistics, verdict,
+  sanity gate and consequences are as registered above.
