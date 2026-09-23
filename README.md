@@ -83,7 +83,7 @@ Unusual Whales data was checked against independent sources before anything was 
 
 The chart is a way to *see* the data. Whether any of it *predicts* price is a separate question, so it was tested --
 pre-registered wherever possible (the rules were committed before any outcome was looked at, and the git history is the
-record).
+record). Five questions, five honest answers:
 
 | question | result |
 |---|---|
@@ -91,9 +91,11 @@ record).
 | Does a flow trader's "conviction" (big premium, volume >> OI, ask-side, single-leg...) predict results? | **No** (pre-registered, 58,386 contract-days). Higher conviction did not earn better results; buying the same contract lost on average. |
 | Do UW flow alerts and an independent aggressor-flow measure agree on direction? | **No agreement** (44.4% of 90 ticker-days). They measure different things. |
 | Do prior-day UW levels improve a live auto-trader's signals (6,947 trades)? | **Not supported** (pre-registered, Holm-corrected). A level in the trade's path: +0.028R, wrong sign, p 0.65. Entry below the gamma flip: +0.054R, right sign in both halves but Holm p 0.51. |
+| Does UW's prior-day gamma regime tell you which setup to run (fade on positive gamma, breakout on negative)? | **Not supported** (pre-registered, 15,444 + 2,103 trades, 61/62 and 47/48 regime stretches). Fades: +0.069R on positive-gamma days, placebo ~0, but Holm p 0.24 and the effect vanished in the second half. Breakouts: wrong sign. Picking a setup by regime gave up more than half the total R versus running both. |
 
 Reading these plainly: the data is accurate and well covered, and it is a genuinely good map of where size traded and where
-dealer hedging is concentrated. In these tests it did not, on its own, tell you which way price goes next. "No detectable
+dealer hedging is concentrated. In these tests it did not, on its own, tell you which way price goes next or which setup to
+run today. "No detectable
 effect" is not proof of none -- every study states the effect size it could have detected -- but it is the honest answer
 from this sample.
 
@@ -172,6 +174,23 @@ computes GEX for. This part reads another system's files by path and ships none 
 </details>
 
 <details>
+<summary><b>Study 4 -- does UW's gamma regime pick the right setup? (pre-registered, optional)</b></summary>
+
+`research/regime_selector/` asks the question dealer-gamma theory actually predicts: positive gamma dampens moves (fades
+should work better), negative gamma amplifies them (breakouts should). Day D's regime is the sign of UW's SPY net gamma on the
+prior session. Two setups from a live auto-trader (a 30-minute sweep fade and the live opening-range breakout), two
+hypotheses, Holm, an ISO-week bootstrap (regimes persist for days), a placebo with the regime shifted 21 sessions, and at
+least 20 regime stretches of each sign. Protocol: [`PREREGISTRATION.md`](research/regime_selector/PREREGISTRATION.md);
+result: [`RESULTS.md`](research/regime_selector/RESULTS.md).
+
+- Fade on positive-gamma days: **+0.069R, placebo +0.004R, but Holm p 0.24 and the effect is entirely in the first half
+  (+0.163R, then -0.023R) -- not supported.**
+- Breakout on negative-gamma days: **-0.051R (wrong sign) -- not supported.**
+- Using the regime to choose a setup earned +704R over 5,727 trades versus +1,615R over 14,253 for running both; both setups
+  make money in both regimes, so sitting one out mostly gives up profit.
+</details>
+
+<details>
 <summary><b>Comparing UW against an independent system (optional)</b></summary>
 
 `compare/` measures agreement between UW and the files an existing trading system already records (read-only, by path;
@@ -194,7 +213,7 @@ python -m compare.run flow --dates 2026-09-16,2026-09-18   # daily options-flow 
 - `src/chart.py` -- the chart: `build_chart` (data) and an inline-SVG renderer; `src/report.py` -- the HTML report.
 - `src/demo.py` -- the seeded synthetic session behind `python main.py demo`.
 - `research/`, `compare/` -- the studies above.
-- `tests/` -- 195 tests against synthetic fixtures in the real response shapes; no API key needed (`pytest`).
+- `tests/` -- 222 tests against synthetic fixtures in the real response shapes; no API key needed (`pytest`).
 
 ## Data terms
 
