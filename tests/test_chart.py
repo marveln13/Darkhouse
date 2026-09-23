@@ -170,7 +170,7 @@ def test_demo_renders_offline_without_a_key(monkeypatch, tmp_path):
     monkeypatch.delenv("UNUSUAL_WHALES_API_KEY", raising=False)
     monkeypatch.setattr(main, "UnusualWhalesClient", lambda: (_ for _ in ()).throw(AssertionError("no API in demo")))
     out = tmp_path / "demo.html"
-    main.cmd_demo(SimpleNamespace(out=str(out), open=False, block_floor=200_000))
+    main.cmd_demo(SimpleNamespace(out=str(out), open=False, block_floor=200_000, svg=str(tmp_path / "c.svg")))
     page = out.read_text(encoding="utf-8")
     assert "SYNTHETIC DEMO DATA" in page and "<svg" in page and "Block print" in page
 
@@ -244,3 +244,10 @@ def test_reach_has_a_floor_for_very_quiet_sessions():
 def test_truncation_note_is_shown_on_the_chart():
     c = chart.build_chart(CANDLES, _levels((100, 1)), _gex(), [], [], blocks_note="Block prints truncated <x>")
     assert "Block prints truncated &lt;x&gt;" in chart.render_chart_svg(c)
+
+
+def test_standalone_svg_is_self_contained():
+    c = chart.build_chart(CANDLES, _levels((100.2, 500)), _gex(call_wall=101.3), [], [])
+    svg = chart.standalone_svg(c)
+    assert svg.startswith('<svg xmlns="http://www.w3.org/2000/svg"') and svg.endswith("</svg>")
+    assert "<style>" in svg and "<script" not in svg and "--dp:" in svg

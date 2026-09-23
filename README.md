@@ -1,198 +1,118 @@
-# Dark Pool + GEX Scanner
+# Black Lantern
 
-Built for **Unusual Whales Hackathon #1** (deadline 2026-10-23, 11:59pm ET).
+**Where big money traded, where dealers have to hedge, and what price did about it -- on one chart.**
 
-A CLI tool that pulls a ticker's real dark pool prints, dark-pool price
-levels, dealer gamma exposure (GEX) structure, and options flow alerts
-from the [Unusual Whales public API](https://api.unusualwhales.com/docs),
-then surfaces three things raw data doesn't show on its own:
+Built on the [Unusual Whales public API](https://api.unusualwhales.com/docs) for **UW Hackathon #1**.
 
-1. **Block prints** — real dark-pool trades at or above a $ notional
-   floor (default $200k), largest first.
-2. **Price-level / GEX confluence** — dark-pool price levels that sit
-   within a tight % of a GEX structural level (call wall, put wall,
-   gamma flip, gamma magnet). A heavy dark-pool level lining up with a
-   dealer-gamma structural level is a stronger read than either alone.
-3. **Flow bias** — aggregate bullish/bearish premium tilt across recent
-   flow alerts (ask-side call buying and bid-side put selling both read
-   bullish; the reverse reads bearish).
+Black Lantern pulls a ticker's dark-pool prints and dark-pool price levels, its dealer gamma (GEX) structure and its
+intraday candles from Unusual Whales, and draws them together: the heaviest dark-pool levels and the call wall / put wall
+/ gamma flip / gamma magnet as lines on the price chart, block prints as circles sized by dollar value, and the places where
+a heavy dark-pool level sits right on a GEX level highlighted. By default the levels come from the **prior** session, so the
+chart shows what was actually known going into the day, not a hindsight overlay.
 
-## Setup
+It is also honest about what this data can and cannot do. Every claim below was tested, most of them pre-registered, and the
+results -- including the ones that came back null -- are reported as they came out.
+
+![Black Lantern chart (synthetic demo data)](docs/demo_chart.svg)
+
+*The image above is the built-in demo, generated from synthetic data -- no real market data is committed to this repo
+(Unusual Whales data is personal-use only).*
+
+## 60-second quickstart
 
 ```bash
 pip install -r requirements.txt
-cp .env.example .env   # fill in UNUSUAL_WHALES_API_KEY (trial keys work)
+python main.py demo --open                      # full report from synthetic data, no API key needed
 ```
 
-Get a trial key at https://unusualwhales.com/public-api#pricing.
-
-## Usage
+With an Unusual Whales key (trial keys work -- https://unusualwhales.com/public-api#pricing):
 
 ```bash
-python main.py scan SPY
-python main.py scan SPY --date 2026-09-17 --block-floor 500000
-python main.py recent --min-premium 100000
+cp .env.example .env                            # put your UNUSUAL_WHALES_API_KEY in .env
+python main.py scan SPY --html reports/spy.html --open
+python main.py scan SPY --date 2026-09-22 --block-floor 5000000 --html reports/spy.html --open
+python main.py recent --min-premium 1000000     # market-wide recent dark-pool blocks
 ```
+
+`scan` prints a text summary and, with `--html`, writes a self-contained report (no external assets, works offline, light
+and dark mode). Useful flags: `--candle-size 1m|5m|15m|30m|1h`, `--block-floor` (dollar floor for a "block"; raise it for
+very liquid tickers like SPY), `--max-pages` (how far back to page dark-pool prints), `--same-day-levels` (draw the
+session's own end-of-day levels instead -- labelled as hindsight on the chart).
+
+## Reading the chart
+
+| on the chart | what it is | from |
+|---|---|---|
+| candles | the session's regular-hours price | `ohlc/{candle_size}` |
+| blue bands | the 5 heaviest dark-pool price levels of the prior session; thicker = more dark-pool volume | `darkpool/{ticker}/price-levels` |
+| purple bands, marked `*` | a heavy dark-pool level within 0.1% of a GEX level (confluence) | both of the above |
+| dashed lines | call wall, put wall, gamma magnet; dotted = gamma flip | `stock/{ticker}/gex-levels` |
+| circles | dark-pool block prints at their time and price; area = dollar notional | `darkpool/{ticker}` |
+
+Levels more than one session-range away from the day's high/low are listed under the chart instead of squashing it. Below
+the chart the report adds the full dark-pool ladder, the top net-gamma strikes, the confluence table, the block-print list
+and the options-flow premium tilt.
 
 ## Endpoints used
 
 All from `https://api.unusualwhales.com` (Bearer auth):
-- `GET /api/darkpool/recent`
-- `GET /api/darkpool/{ticker}`
-- `GET /api/darkpool/{ticker}/price-levels`
-- `GET /api/stock/{ticker}/gex-levels`
-- `GET /api/stock/{ticker}/spot-exposures/strike`
-- `GET /api/option-trades/flow-alerts`
+`/api/stock/{ticker}/ohlc/{candle_size}`, `/api/darkpool/{ticker}`, `/api/darkpool/{ticker}/price-levels`,
+`/api/darkpool/recent`, `/api/stock/{ticker}/gex-levels`, `/api/stock/{ticker}/spot-exposures/strike`,
+`/api/stock/{ticker}/greek-exposure`, `/api/option-trades/flow-alerts`, `/api/option-contract/{id}/historic`.
 
-## Project layout
+## What we verified about the data
 
-- `src/uw_client.py` — thin Bearer-auth REST client, one retry on 429.
-- `src/models.py` — parsed dataclasses for each endpoint family.
-- `src/darkpool.py`, `src/gex.py`, `src/flow.py` — one function per
-  endpoint, returning parsed models.
-- `src/analysis.py` — the block-print / confluence / flow-bias logic
-  above. Pure functions, no network calls, fully unit-tested.
-- `tests/` — parsing + analysis logic verified against fixtures built
-  from the real documented API response shape (no live key required to
-  run `pytest`).
-- `main.py` — CLI (`scan <ticker>`, `recent`).
+Unusual Whales data was checked against independent sources before anything was built on it.
 
-## Comparing UW against ARGUS (optional)
+- **Dark-pool coverage: 95-97%.** An independent detector logging every off-exchange (SIP exchange `D`) print of $200k+ from
+  Alpaca's live tape: 95-97% of its blocks appear in UW's feed (same size, price within 2 cents, time within 5 s, median lag
+  0.5 s), and it captured 93.6% of UW's $200k+ prints on a healthy day. The comparison also found a real bug in that
+  detector (fixed).
+- **GEX regime agreement: 77.5%.** Over 120 days, UW's SPY net gamma and an independently computed GEX (ThetaData Greeks
+  and open interest) agree on the sign of the regime 77.5% of the time (z = 6.0 vs a coin flip). Related, not identical:
+  magnitudes correlate weakly (r = 0.15) because the two cover different expiries and strikes.
+- **API behaviour the docs leave open**, all fixed and pinned by tests (`python -m scripts.first_call_check` re-verifies
+  them live): every endpoint wraps its payload in `{"data": ...}`; dark-pool `premium` is price x size; put gamma is
+  signed negative; the per-strike endpoint's default page is the 50 *lowest* strikes (`limit=500` needed);
+  `greek-exposure` timeframes are single tokens (`1M`, not `1M-2M`, which returns 422); GEX snapshots are end-of-day
+  (~16:14 ET); OHLC rows come newest-first and include pre/post-market; and once `older_than` is set, the dark-pool
+  endpoint stops honouring `date` and walks into earlier days -- the pager filters to the requested day and stops at the
+  boundary.
 
-`compare/` tests whether UW data adds anything over what an existing
-trading system already records, using that system's own files read-only
-(`--argus-root`, default the sibling `ai-trading-desk-2` checkout):
+## What we tested -- and what held up
 
-```bash
-python -m compare.run gex                                  # ThetaData-derived SPY GEX regime vs UW net gamma, ~120 days
-python -m compare.run darkpool --date 2026-09-18 --top 8   # do UW's prints contain the exchange-'D' >= $200k blocks the other system logged?
-python -m compare.run flow --dates 2026-09-16,2026-09-18   # daily options-flow direction, per ticker
-```
+The chart is a way to *see* the data. Whether any of it *predicts* price is a separate question, so it was tested --
+pre-registered wherever possible (the rules were committed before any outcome was looked at, and the git history is the
+record).
 
-Output is aggregate statistics only; raw UW responses are never saved.
-These measure *agreement*, not profitability -- whether the signals predict
-anything is a separate forward-returns test.
+| question | result |
+|---|---|
+| Does price react more at dark-pool x GEX confluence levels than at ordinary ones? | **No detectable effect.** Confluence held 53.8% vs 49.7-51.3% for controls and a shifted placebo; t = 0.8-1.0; same small sign across a 10-row robustness grid, none reaching t = 2. |
+| Does a flow trader's "conviction" (big premium, volume >> OI, ask-side, single-leg...) predict results? | **No** (pre-registered, 58,386 contract-days). Higher conviction did not earn better results; buying the same contract lost on average. |
+| Do UW flow alerts and an independent aggressor-flow measure agree on direction? | **No agreement** (44.4% of 90 ticker-days). They measure different things. |
+| Do prior-day UW levels improve a live auto-trader's signals (6,947 trades)? | **Not supported** (pre-registered, Holm-corrected). A level in the trade's path: +0.028R, wrong sign, p 0.65. Entry below the gamma flip: +0.054R, right sign in both halves but Holm p 0.51. |
 
-## Research: does confluence actually matter?
+Reading these plainly: the data is accurate and well covered, and it is a genuinely good map of where size traded and where
+dealer hedging is concentrated. In these tests it did not, on its own, tell you which way price goes next. "No detectable
+effect" is not proof of none -- every study states the effect size it could have detected -- but it is the honest answer
+from this sample.
 
-The scanner's central idea -- a heavy dark-pool level lining up with a GEX
-level is a stronger read than either alone -- is a hypothesis. `research/`
-tests it as an event study:
+<details>
+<summary><b>Study 1 -- confluence reaction (event study)</b></summary>
 
 ```bash
 python -m research.run --tickers SPY,QQQ,NVDA,TSLA --days 250
+python -m research.sensitivity
 ```
 
-For each trading day D it pulls UW's dark-pool price levels and GEX levels,
-labels them (`confluence`, `dp_only`, `gex_only`, plus a `placebo` shifted
-+/-0.75%), and measures how price reacts when it first touches each level
-on D+1: **hold** (rallies/falls 0.5 ATR off the level) vs **break** (goes
-0.5 ATR through it first). Design choices that guard against fooling
-ourselves:
+For each trading day D it pulls UW's dark-pool price levels and GEX levels, labels them (`confluence`, `dp_only`,
+`gex_only`, plus a `placebo` shifted +/-0.75%), and measures how price reacts when it first touches each level on D+1:
+**hold** (moves 0.5 ATR off the level) vs **break** (goes 0.5 ATR through it first). Guards: levels from D, reaction on D+1
+(no lookahead); ATR from bars before the touch only; the touch bar is excluded from the outcome window; the unit of
+analysis is the ticker-day; placebo levels show whether *any* level attracts reaction; on real SPY/QQQ bars with ordinary
+levels (prior-day high/low) the harness returns 45-51% hold rates, i.e. it does not manufacture an edge.
 
-- Levels come from day D, reaction is measured on D+1 -- no lookahead.
-- ATR uses only bars before the touch; the touch bar is excluded from the
-  outcome window (its range trivially spans the level).
-- The unit of analysis is the ticker-day, not the level -- levels on the
-  same day are not independent.
-- Placebo levels show whether *any* level attracts reaction.
-- On real SPY/QQQ M30 bars with ordinary levels (prior-day high/low) the
-  harness returns hold rates of 45-51%, i.e. it does not manufacture an
-  edge from nothing.
-
-Expect a small confluence sample (it needs both signals at once), so only
-a large effect will be distinguishable from noise; a null result is a
-legitimate finding and is reported as one.
-
-## Flow conviction study (pre-registered)
-
-A human flow trader's judgment, turned into something testable. The Bay Street
-Bulls leader sizes entries off Unusual Whales flow ("14K contracts vs 900 OI, $4M,
-mostly ask-side ... keeping it lite"). `research/flow/` codifies the criteria visible
-in that call as a graded 0-9 **conviction score** on a contract's end-of-day stats
-(premium, volume vs open interest, ask-side share, floor share, single-leg, days to
-expiry, moderate OTM), then asks one question: **do higher scores earn better
-results?** The score, the outcome definitions (direction-signed stock return vs SPY,
-and the contract's own return), the statistics (winsorized means, day-clustered
-bootstrap, within-month permutation, first-half/second-half split) and every pull
-parameter were committed *before* any cross-event outcome was examined -- the git
-history is the pre-registration, and two defects found along the way (the UW API
-evaluates DTE filters relative to *today*, and its market-wide alert pager walks into
-earlier days) were fixed and logged before any outcome existed.
-
-```bash
-python -m research.flow.collect discover        # ~500k alerts, 12 months
-python -m research.flow.collect enrich --wait-for-reset
-python -m research.flow.analyze                 # prints every registered test, including failures
-python -m research.flow.card GOOGL261002C00355000 2026-09-10 --equity 100000
-```
-
-`card` renders one contract-day as an HTML card: the score component by component,
-plus a position-size vocabulary as a reference (lottery ticket 0.25%, lite starter
-0.5%, half 1%, full/heavy 2% of account equity; scale-in adds of 2 contracts).
-The score does not set size -- that link is only justified if the study supports it.
-
-**Result (the first and only pre-registered run, 2026-09-19): null.** 58,386 directional
-contract-days over 12 months (95,263 passed the premium cutoff; 38% had no side dominance
-and were not directional). Higher conviction did not earn better results:
-
-| conviction | events | underlying, 5-day excess return vs SPY (direction-signed) | buy the contract, gross | buy the contract, net of half-spread |
-|---|---|---|---|---|
-| low (0-3) | 17,506 | +0.07% | -4.5% | -12.0% |
-| mid (4-6) | 38,639 | +0.02% | -4.2% | -11.6% |
-| high (7-9) | 2,241 | -0.23% | -3.1% | -13.2% |
-
-High minus low: -0.28% (95% CI -0.72% to +0.12%, permutation p = 0.16) on the underlying;
--1.0% (CI -7.4% to +6.1%, p = 0.76) gross; -2.9% (CI -8.9% to +3.8%, p = 0.37) net.
-Spearman(score, outcome) = -0.01 / -0.07; first- and second-half results do not agree in
-sign for the contract outcomes. Reading it plainly:
-
-- **The score does not predict outcomes**, and neither does the flow direction itself:
-  the hit rate of direction-signed underlying returns is about 50% in every bucket.
-- **Following the flow by buying the same contract loses on average** (median -15% to
-  -30% gross), with no improvement at higher conviction. Time decay and spread dominate.
-- The one bound worth stating: on the underlying the upper end of the high-minus-low CI is
-  only +0.12% per event, so a real positive dose-response bigger than that is unlikely
-  at this horizon. On contract returns the CIs are wide (about +/-7 points).
-
-Caveats: attrition differs by bucket (about 20% of low-score, 12% of high-score
-ask-dominant events had no usable D+1/D+6 contract row); the net figure uses D's closing
-NBBO and is probably pessimistic; the cutoff excluded an estimated ~27% of high-score
-events (a seeded sample measured it); one horizon (5 days) and one year of data.
-"No detectable effect" is not proof of none, and the leader's edge, if any, may live in
-what a mechanical score cannot see: catalysts, ticker selection, exits and sizing.
-
-## Status and findings
-
-Verified against the live Unusual Whales API (2026-09-18). What the docs got
-wrong or left open, all fixed and covered by tests (`python -m
-scripts.first_call_check` re-verifies them):
-
-- Every endpoint wraps its payload in `{"data": ...}`; `gex-levels` nests its
-  fields inside `data` as a dict.
-- Dark-pool `premium` is price x size (stock notional).
-- Put gamma is signed negative (per-strike and daily), so net = call + put.
-- The strike endpoint's real default page is 50 rows of the *lowest* strikes;
-  `limit=500` is required (SPY returns 483 rows).
-- `greek-exposure` timeframes are single tokens (1D 2D 1W 2W 1M 2M 1Y 2Y YTD);
-  the docs' "1M-2M" style returns HTTP 422. Default = 1 year (250 rows).
-- Historical `date` queries work (verified back to 2025-10); GEX snapshots are
-  timestamped ~16:14 ET, i.e. end-of-day.
-- On the dark-pool endpoint, once `older_than` is set the API stops honouring
-  `date`: a pager asking for one day walks back into earlier days (asking for
-  9/18 returned 9/15-9/18) and `tracking_id` is not unique per print. The
-  fetcher filters to the requested ET date, stops at the day boundary, and
-  dedupes on (time, size, price, id).
-
-**Finding 1 -- GEX regime agreement.** Over 120 days, ARGUS's ThetaData-derived
-SPY GEX sign and UW's net gamma agree on regime **77.5%** of the time (z = 6.0
-vs a coin flip); magnitudes correlate only weakly (r = 0.15). UW reads negative
-on 66% of days vs 52% for the ARGUS measure (which covers 0-7 DTE within +/-15%
-of spot) -- related, but not the same measurement.
-
-**Finding 2 -- the confluence hypothesis did not hold.** 250 sessions x SPY,
-QQQ, NVDA, TSLA (~400 confluence ticker-days), primary configuration fixed
-before looking at any price outcome:
+250 sessions x SPY, QQQ, NVDA, TSLA, primary configuration fixed before any outcome:
 
 | level type | events | hold rate |
 |---|---|---|
@@ -201,36 +121,82 @@ before looking at any price outcome:
 | GEX only | 683 | 51.1% |
 | placebo (shifted) | 841 | 51.3% |
 
-Confluence beats each control by 2-3 points, but t = 0.8-1.0 (p ~ 0.3-0.4).
-A 10-row robustness grid (`python -m research.sensitivity`; proximity,
-reaction size, horizon, level count, GEX basis) shows the same small positive
-sign in every row and no row reaching t = 2 (max t = 1.74). At this sample size
-only an effect of roughly 8 points or more would be detectable, so this is
-"no detectable effect", not proof of none. Note also that an early draft used a
-0.5% proximity, which made 61-70% of SPY/QQQ heavy levels "confluence" -- no
-distinct group -- so the primary definition is 0.1% (about one price bucket),
-chosen from level structure alone.
+Only an effect of roughly 8 points or more was detectable at this sample size. An early draft used a 0.5% proximity, which
+made 61-70% of SPY/QQQ heavy levels "confluence" -- no distinct group -- so the primary definition is 0.1%, chosen from
+level structure alone before any outcome was computed.
+</details>
 
-**Finding 3 -- cross-source validation of an existing dark-pool detector.**
-ARGUS logs every off-exchange (SIP exchange `D`) print of $200k+ notional from
-Alpaca's live stream. Against UW's dark-pool feed on two sessions (8 tickers,
-regular hours, minutes when the detector was down excluded): 95-97% of the
-detector's blocks appear in UW's feed (same size, price within 2 cents, time
-within 5 s, median lag 0.5 s), and it captured 93.6% of UW's $200k+ prints on a
-healthy day. Spot checks against Alpaca's own historical tape (5-minute
-windows) agree to within 5-9%. The comparison also exposed a real bug: an emoji
-in a console print raised `UnicodeEncodeError` when output was redirected to a
-file, which aborted trade batches and reconnected the websocket 74,200 times in
-one session. It cost about 5 points of coverage overall (7-11 on SPY/QQQ, where
-trades arrive in bursts) and is fixed. Neither feed is a discrete "block"
-filter: both list 100+ prints of $200k+ per minute in regular hours.
+<details>
+<summary><b>Study 2 -- flow conviction (pre-registered)</b></summary>
 
-**Finding 4 -- options-flow direction: no agreement.** Per ticker-day, the sign
-of ARGUS's delta-weighted net aggressor flow (all trades) versus UW's
-premium-weighted flow-alert tilt (rule-filtered alerts) agreed 44.4% of the time
-(90 ticker-days, z = -1.05, r = -0.11). They measure different things, so this
-says the two are not redundant, not that either is wrong.
+A human flow trader's judgment, turned into something testable. `research/flow/` codifies the criteria visible in a real
+trade call as a graded 0-9 **conviction score** on a contract's end-of-day stats (premium, volume vs open interest,
+ask-side share, floor share, single-leg, days to expiry, moderate OTM), then asks: do higher scores earn better results?
+Score, outcomes, statistics (winsorized means, day-clustered bootstrap, within-month permutation, half split) and pull
+parameters were committed before any outcome was examined.
 
-API terms: Unusual Whales data is personal-use only and may not be
-redistributed, so this repo ships only synthetic fixtures - never commit
-real API responses.
+```bash
+python -m research.flow.collect discover
+python -m research.flow.collect enrich --wait-for-reset
+python -m research.flow.analyze
+python -m research.flow.card GOOGL261002C00355000 2026-09-10 --equity 100000
+```
+
+| conviction | events | underlying, 5-day excess return vs SPY (direction-signed) | buy the contract, gross | net of half-spread |
+|---|---|---|---|---|
+| low (0-3) | 17,506 | +0.07% | -4.5% | -12.0% |
+| mid (4-6) | 38,639 | +0.02% | -4.2% | -11.6% |
+| high (7-9) | 2,241 | -0.23% | -3.1% | -13.2% |
+
+High minus low: -0.28% (95% CI -0.72% to +0.12%, permutation p = 0.16) on the underlying; -1.0% (CI -7.4% to +6.1%) gross;
+-2.9% (CI -8.9% to +3.8%) net. The hit rate of direction-signed underlying returns is about 50% in every bucket. Caveats:
+attrition differs by bucket; the net figure uses D's closing NBBO and is probably pessimistic; one horizon (5 days) and one
+year. The trader's edge, if any, may live in what a score cannot see: catalysts, ticker selection, exits and sizing.
+</details>
+
+<details>
+<summary><b>Study 3 -- does UW data filter a live auto-trader's signals? (pre-registered, optional)</b></summary>
+
+`research/argus_filter/` tests whether the **prior** session's UW levels change the outcomes of ARGUS's M30i PUTS signals
+(a loud 30-minute liquidity-sweep fade; 9,452 signals over 12 months, 6,947 with complete UW data). Two hypotheses, fixed
+direction, Holm-corrected, day-clustered bootstrap, a shifted-level placebo, half split, minimum 1,500 signals and 0.05R.
+The full protocol is in [`research/argus_filter/PREREGISTRATION.md`](research/argus_filter/PREREGISTRATION.md) and the
+result in [`research/argus_filter/RESULTS.md`](research/argus_filter/RESULTS.md).
+
+- H1 -- a dark-pool or GEX level in the path from entry to target lowers R: **+0.028R (wrong sign), p 0.65 -- not supported.**
+  83% of signals have a level in a 3R path, so the levels barely discriminate.
+- H2 -- entry below the gamma flip raises R: **+0.054R, same sign in both halves, Holm p 0.51 -- not supported.**
+
+2,505 signals had no GEX snapshot (UW returns an empty one for thinly covered names), so the sample leans toward names UW
+computes GEX for. This part reads another system's files by path and ships none of its data; it is optional.
+</details>
+
+<details>
+<summary><b>Comparing UW against an independent system (optional)</b></summary>
+
+`compare/` measures agreement between UW and the files an existing trading system already records (read-only, by path;
+`--argus-root`, default the sibling `ai-trading-desk-2` checkout). Output is aggregate statistics only.
+
+```bash
+python -m compare.run gex                                  # SPY GEX regime vs UW net gamma, ~120 days
+python -m compare.run darkpool --date 2026-09-18 --top 8   # UW dark-pool coverage of independently logged blocks
+python -m compare.run flow --dates 2026-09-16,2026-09-18   # daily options-flow direction, per ticker
+```
+</details>
+
+## Project layout
+
+- `main.py` -- CLI: `demo`, `scan`, `recent`.
+- `src/uw_client.py` -- thin Bearer-auth REST client (one retry on 429, and on a dropped connection / timeout / 5xx).
+- `src/darkpool.py`, `src/gex.py`, `src/flow.py`, `src/ohlc.py` -- one function per endpoint family, returning parsed
+  models (`src/models.py`); `darkpool.prints_for_day` pages a whole session.
+- `src/analysis.py` -- block prints, confluence, flow tilt, top gamma strikes (pure functions).
+- `src/chart.py` -- the chart: `build_chart` (data) and an inline-SVG renderer; `src/report.py` -- the HTML report.
+- `src/demo.py` -- the seeded synthetic session behind `python main.py demo`.
+- `research/`, `compare/` -- the studies above.
+- `tests/` -- 195 tests against synthetic fixtures in the real response shapes; no API key needed (`pytest`).
+
+## Data terms
+
+Unusual Whales data is personal-use only and may not be redistributed. This repo ships only code and synthetic fixtures;
+generated reports go to the git-ignored `reports/` folder and the research caches to `.cache/`.

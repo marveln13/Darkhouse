@@ -137,6 +137,13 @@ def cmd_demo(args):
                               args.block_floor, top_strikes=d["top_strikes"], chart_html=chart_html, banner=demo.BANNER,
                               session=demo.SESSION_DATE)
     write_report(page, args.out, args.open)
+    if args.svg:
+        path = pathlib.Path(args.svg)
+        path.parent.mkdir(parents=True, exist_ok=True)
+        path.write_text(chart.standalone_svg(chart.build_chart(
+            d["candles"], d["levels"], d["gex"], blocks, confluence, levels_date=d["levels_date"],
+            levels_note=PRIOR_NOTE)), encoding="utf-8")
+        print(f"Standalone chart SVG written to {path}")
 
 
 def cmd_recent(args):
@@ -168,6 +175,7 @@ def main():
     demo = sub.add_parser("demo", help="Render the report from synthetic data (no API key needed)")
     demo.add_argument("--out", default=os.path.join("reports", "demo.html"))
     demo.add_argument("--open", action="store_true")
+    demo.add_argument("--svg", default=None, help="Also write the chart alone as a standalone .svg (README image)")
     demo.add_argument("--block-floor", type=float, default=analysis.DEFAULT_BLOCK_NOTIONAL_FLOOR)
     demo.set_defaults(func=cmd_demo)
 

@@ -229,3 +229,18 @@ CHART_CSS = """
 .gexsw{border-top:2px dashed var(--gex);height:0}.blocksw{background:var(--blk);opacity:.6;border-radius:50%;width:10px;height:10px}
 .readout{min-height:20px;font:13px ui-monospace,monospace;color:var(--muted)}
 """
+
+# Tokens the chart CSS reads from the report page; repeated here so a standalone SVG file renders on its own.
+_STANDALONE_TOKENS = """
+svg{--ink:#14181f;--muted:#5d6675;--gex:#c2410c;background:#fff}
+@media (prefers-color-scheme:dark){svg{--ink:#e8ebf0;--muted:#98a2b3;--gex:#fb923c;background:#171b22}}
+"""
+
+
+def standalone_svg(chart, width=960, height=440):
+    """The chart as a self-contained .svg file (for a README image): same drawing, styles embedded, no script."""
+    html = render_chart_svg(chart, width, height)
+    start, end = html.index("<svg"), html.index("</svg>") + len("</svg>")
+    svg = html[start:end].replace("<svg ", '<svg xmlns="http://www.w3.org/2000/svg" ', 1)
+    style = (CHART_CSS.replace(":root", "svg") + _STANDALONE_TOKENS).replace(".bl-chart ", "")
+    return svg.replace(">", f"><style>{style}</style>", 1)
