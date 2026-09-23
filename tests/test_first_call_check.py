@@ -14,6 +14,7 @@ def _client():
             {"date": "2026-09-16", "call_gamma": "5e9", "put_gamma": "-7e9"},
             {"date": "2026-09-17", "call_gamma": "6e9", "put_gamma": "-2e9"}]},
         "/api/option-trades/flow-alerts": load_fixture("flow_alerts.json"),
+        "/api/stock/SPY/ohlc/5m": load_fixture("ohlc_5m.json"),
     })
 
 
@@ -25,6 +26,7 @@ def test_first_call_check_runs_every_section_and_reports_sign_and_timeframes(cap
     assert "put_gamma_oi : 100% of 4 negative" in out          # fixture puts are signed negative
     assert "timeframe=YTD" in out and "2026-09-16 .. 2026-09-17" in out
     assert "price*size=" in out and "rows returned: 4" in out
+    assert "order: newest first" in out and "'r': 78" in out
 
 
 def test_one_failing_endpoint_does_not_hide_the_others(capsys):

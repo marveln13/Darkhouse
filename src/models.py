@@ -88,7 +88,7 @@ class DarkPoolPriceLevels:
     def from_api(cls, ticker, raw):
         return cls(
             ticker=ticker,
-            date=raw["date"],
+            date=raw.get("date"),
             levels=[DarkPoolPriceLevel.from_api(r) for r in raw.get("data", [])],
         )
 
@@ -220,4 +220,31 @@ class FlowAlert:
             has_multileg=bool(raw.get("has_multileg", False)),
             alert_rule=raw.get("alert_rule", ""),
             option_chain=raw.get("option_chain"),
+        )
+
+
+@dataclass
+class Candle:
+    """One OHLC candle from /api/stock/{ticker}/ohlc/{candle_size}. Verified live: prices arrive as decimal
+    strings, rows come newest-first, and pre/post-market candles are included (market_time pr/r/po)."""
+    start_time: str
+    end_time: str
+    open: float
+    high: float
+    low: float
+    close: float
+    volume: int
+    market_time: str
+
+    @classmethod
+    def from_api(cls, raw):
+        return cls(
+            start_time=raw["start_time"],
+            end_time=raw["end_time"],
+            open=_num(raw["open"]),
+            high=_num(raw["high"]),
+            low=_num(raw["low"]),
+            close=_num(raw["close"]),
+            volume=int(raw.get("volume") or 0),
+            market_time=raw.get("market_time", ""),
         )

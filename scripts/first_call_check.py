@@ -6,8 +6,8 @@ docs left open, so they are settled in one run instead of discovered as bugs.
 
 Answers: how list responses are wrapped; whether dark-pool `premium` is
 price x size; whether put gamma is signed negative (per-strike and daily);
-how many strike rows come back vs the 500 page cap; and what each
-greek-exposure `timeframe` value actually returns. Prints only -- nothing is
+how many strike rows come back vs the 500 page cap; what each
+greek-exposure `timeframe` value actually returns; and the OHLC row order and sessions. Prints only -- nothing is
 saved. Never prints the API key.
 """
 import statistics
@@ -96,6 +96,17 @@ def main(client, ticker):
             print(f"  timeframe={tf!s:<6} rows={len(rows):>4}  {dates[0] if dates else '-'} .. {dates[-1] if dates else '-'}"
                   f"   put_gamma: {negative_share([fnum(r.get('put_gamma')) for r in rows])}")
 
+    def candles():
+        raw = client.get(f"/api/stock/{ticker}/ohlc/5m")
+        rows = rows_of(raw)
+        starts = [r.get("start_time") for r in rows]
+        order = ("newest first" if starts == sorted(starts, reverse=True)
+                 else "oldest first" if starts == sorted(starts) else "unordered")
+        sessions = {}
+        for r in rows:
+            sessions[r.get("market_time")] = sessions.get(r.get("market_time"), 0) + 1
+        print(f"  top-level: {shape(raw)}\n  rows: {len(rows)}, order: {order}, market_time counts: {sessions}")
+
     def alerts():
         raw = client.get("/api/option-trades/flow-alerts", {"limit": 3, "ticker_symbol": ticker})
         print("  top-level:", shape(raw))
@@ -107,6 +118,7 @@ def main(client, ticker):
     check(f"{ticker} spot-exposures/strike  (put-gamma sign, page cap)", strikes)
     check(f"{ticker} greek-exposure  (put-gamma sign, timeframe semantics)", greeks)
     check("flow-alerts", alerts)
+    check(f"{ticker} ohlc/5m  (row order, sessions)", candles)
 
 
 if __name__ == "__main__":

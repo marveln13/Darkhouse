@@ -7,6 +7,10 @@ no external assets.
 """
 from html import escape
 
+from .chart import CHART_CSS
+
+BRAND = "Black Lantern"
+
 GEX_LABELS = {
     "call_wall": "Call wall",
     "put_wall": "Put wall",
@@ -38,6 +42,8 @@ th{color:var(--muted);font-weight:600;font-size:13px}
 td.n,th.n{text-align:right}
 .bull{color:var(--good)}.bear{color:var(--bad)}
 .wrap{overflow-x:auto}
+.brand{font-weight:700;letter-spacing:.14em;text-transform:uppercase;font-size:12px;color:var(--gex);margin:0 0 6px}
+.banner{border:1px dashed var(--gex);color:var(--gex);border-radius:6px;padding:8px 12px;margin:0 0 14px;font-weight:600}
 """
 
 
@@ -118,22 +124,26 @@ def _strike_table(top_strikes, source):
 
 
 def render_html(ticker, gex, levels, blocks, confluence, bias, block_floor,
-                top_strikes=None, strike_source="vol"):
+                top_strikes=None, strike_source="vol", chart_html=None, banner="", session=None):
     tone = {"bullish": "bull", "bearish": "bear"}.get(bias["net_bias"], "")
     strike_section = (
         f'<section><h2>Top gamma strikes ({escape(strike_source)} basis)</h2>'
         f'{_strike_table(top_strikes, strike_source)}</section>'
         if top_strikes is not None else ""
     )
+    session_part = f"session {escape(str(session))} &middot; " if session else ""
+    chart_section = (f'<section><h2>Price, dark-pool levels and GEX structure</h2>{chart_html}</section>\n'
+                     if chart_html else "")
     return f"""<!doctype html>
 <html lang="en"><head><meta charset="utf-8">
 <meta name="viewport" content="width=device-width,initial-scale=1">
-<title>{escape(ticker)} Dark Pool + GEX Scan</title><style>{_CSS}</style></head>
+<title>{BRAND} &mdash; {escape(ticker)}</title><style>{_CSS}{CHART_CSS}</style></head>
 <body><main>
-<h1>{escape(ticker)} &mdash; Dark Pool + GEX Scan</h1>
-<p class="sub">{escape(str(gex.date))} &middot; GEX source: {escape(str(gex.source))} &middot; data: Unusual Whales API</p>
+<p class="brand">{BRAND}</p>
+{banner}<h1>{escape(ticker)} &mdash; Dark Pool + GEX Scan</h1>
+<p class="sub">{session_part}levels {escape(str(gex.date))} &middot; GEX source: {escape(str(gex.source))} &middot; data: Unusual Whales API</p>
 
-<section><h2>Dark-pool ladder with GEX levels</h2>{_ladder(levels, gex)}</section>
+{chart_section}<section><h2>Dark-pool ladder with GEX levels</h2>{_ladder(levels, gex)}</section>
 {strike_section}
 <section><h2>Level / GEX confluence</h2>{_confluence_table(confluence)}</section>
 <section><h2>Block prints (&ge; ${block_floor:,.0f} notional)</h2>{_blocks_table(blocks)}</section>

@@ -35,4 +35,5 @@ def fake_client():
         "/api/stock/SPY/gex-levels": load_fixture("gex_levels.json"),
         "/api/stock/SPY/spot-exposures/strike": load_fixture("spot_gex_by_strike.json"),
         "/api/option-trades/flow-alerts": load_fixture("flow_alerts.json"),
+        "/api/stock/SPY/ohlc/5m": load_fixture("ohlc_5m.json"),
     })
