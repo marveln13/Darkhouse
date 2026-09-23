@@ -74,4 +74,47 @@ One year of data, one setup as primary.
 4. Pin the ORB UP population in Addendum 0.
 
 ## Addenda log
-(none yet)
+
+### Addendum 0 -- 2026-09-22 (ORB UP replication population, pinned)
+Written BEFORE any UW data is fetched for ORB UP and before any ORB UP outcome is joined to any level. It pins the population
+and outcome as the document requires; nothing above is changed. It mirrors the live ARGUS admission path wherever that path
+can be computed at stock level.
+- **Signals:** `backtest/test_orb_premarket_confluence_gap_and_go_only.detect_gap_and_go_signals(ticker, bars)` on the cached
+  M15 bars (`backtest/test_orb.load_cached`). That means: gap_pct >= GAP_AND_GO_CALLS_THRESHOLD_PCT (0.5); the first close above
+  the first bar's high; breakout bar index >= 3 (MIN_BREAKOUT_BAR_INDEX); at most one signal per ticker-day. Entry = the breakout
+  bar's close; stop = the first bar's low.
+- **Pre-market gate (live, hard-coded `PREMARKET_CONFLUENCE_ENABLED = True` in `detection/orb_engine.py`):** keep only
+  signals where `tag_confluence` (`backtest/test_orb_premarket_confluence_real.py`) marks `_confluence = True`, meaning the
+  breakout close is above that day's real Alpaca pre-market high. Signals with no pre-market data are excluded and counted.
+- **Outcome:** R from `backtest.trade_simulator.simulate_trade(bars, ts_list, idx, "up", entry, stop, 2.5,
+  max_bars_forward=26)`. idx = the breakout bar's index, found with bisect_right(ts_list, signal_ts) - 1, as in
+  `backtest/test_m30i_puts_orb_up_confluence.simulate_orb`. 2.5R is the live automated TP; 26 is the M15 hold used there.
+- **Universe / window:** ARGUS `config.WATCHLIST`. Signal dates fall within 365 calendar days back from the newest cached M15
+  session (same convention as Addendum 1, item 1).
+- **Not replicated (option-level or discretionary; stated, not modelled):** the DTE gate, the option-spread gate, the late-day
+  cutoff, cross-setup mutes, the grade card.
+- **Tests:** the same H1 and H2 with the same statistics, verdict rules, Holm pair and Addendum 1 gap-fills, read for a call.
+  H1 path = entry < level <= target (a level between entry and the 2.5R target is resistance for a call), hypothesised LOWER
+  mean R. H2 = entry below D-1 gamma_flip, hypothesised HIGHER mean R (breakouts are the setup GEX theory expects to benefit
+  from negative gamma; ORB UP's VIX1D result points the same way). ORB UP is replication only: it cannot rescue or override the
+  M30i PUTS verdict.
+
+### Addendum 1 -- 2026-09-22 (implementation gap-fills)
+Written after the step 1-3 code (51c1e60) and BEFORE any UW data was fetched for this study; no outcome (R) has been joined to any
+level or examined. Nothing above is changed; these fill points the document left open, exactly as already coded in
+`research/argus_filter/protocol.py` and `stats.py`.
+1. **Window:** "last 12 months of cached data" = 365 calendar days back from the newest cached session, applied to the signal
+   date D (ARGUS's LOOKBACK_CALENDAR_DAYS convention).
+2. **GEX source:** the four GEX fields come from UW's gex-levels endpoint with source "oi", the same source the earlier confluence
+   study used.
+3. **Placebo scope:** the placebo is defined only for H1 ("repeat H1 with every level shifted"), so "placebo passes" is a verdict
+   condition for H1 only. An H2 placebo (shifting gamma_flip) is computed and reported for information only: a ~1% flip shift
+   barely changes which side of the flip an entry is on, so a genuine regime effect would fail it by construction (shown on
+   synthetic data before any fetch).
+4. **Placebo test and draw:** "smaller than half of the real effect" is judged by magnitude (|placebo| < 0.5 x |real|). One
+   placebo draw, seeded with the study seed 20260921.
+5. **Direction:** SUPPORTED additionally requires the full-sample effect to have the hypothesised sign (H1 negative, H2 positive);
+   an effect with the opposite sign is NOT SUPPORTED even if significant.
+
+Informational (not a change): the step 1 export produced 9,452 M30i PUTS signals across 111 tickers (window 2025-09-15..2026-09-15),
+about 4.7x the "n ~ 2,000" estimate in the power statement. The fixed rules above apply unchanged.
