@@ -10,8 +10,10 @@ intraday candles from Unusual Whales, and draws them together: the heaviest dark
 a heavy dark-pool level sits right on a GEX level highlighted. By default the levels come from the **prior** session, so the
 chart shows what was actually known going into the day, not a hindsight overlay.
 
-It is also honest about what this data can and cannot do. Every claim below was tested, most of them pre-registered, and the
-results -- including the ones that came back null -- are reported as they came out.
+**Black Lantern is a map, not a crystal ball.** It doesn't tell you which way price will go. It shows you where the
+decisions are -- the levels where size traded and where dealers have to hedge -- so you know where to watch the reaction,
+where your risk is defined, and when you're wrong. That approach is deliberate, and it's backed by five studies on the data
+itself (below): these levels don't decide direction on their own, so the tool never pretends they do.
 
 ![Black Lantern chart (synthetic demo data)](docs/demo_chart.svg)
 
@@ -55,6 +57,22 @@ bands, dashed vs dotted GEX lines -- so nothing depends on colour alone. Levels 
 the chart the report adds the full dark-pool ladder, the top net-gamma strikes, the confluence table, the block-print list
 and the options-flow premium tilt.
 
+## Using it: levels are decision points
+
+Don't guess the direction -- wait for price to show you, and let the level define the trade.
+
+- **Before the move:** note the levels closest to price. Those are where a decision will happen.
+- **Price holds a level** (say the put wall): the level is acting as support, and a long has a precise, nearby
+  invalidation just below it.
+- **Price fails a level:** the support is gone -- a long there is invalidated, and the failure itself is information.
+- **Hatched confluence bands** are where two independent maps -- dark-pool size and dealer gamma -- agree. They are natural
+  places to plan a decision, not a promise of a bounce.
+- **Block prints at a level** show real size transacting there.
+
+Example -- SPY on 2026-09-22 (the live chart from the demo video): the prior session left a hatched confluence band at $773,
+a heavy dark-pool level on the prior day's gamma flip ($772.83). SPY sold into it, the low held at $772.59, and price
+rallied. The chart didn't forecast that -- it showed where to watch, and where a long's risk was defined if it held.
+
 ## Endpoints used
 
 All from `https://api.unusualwhales.com` (Bearer auth):
@@ -81,11 +99,12 @@ Unusual Whales data was checked against independent sources before anything was 
   endpoint stops honouring `date` and walks into earlier days -- the pager filters to the requested day and stops at the
   boundary.
 
-## What we tested -- and what held up
+## Why it's a map, not a crystal ball
 
-The chart is a way to *see* the data. Whether any of it *predicts* price is a separate question, so it was tested --
-pre-registered wherever possible (the rules were committed before any outcome was looked at, and the git history is the
-record). Five questions, five honest answers:
+Before building on this data, five questions tested whether it decides direction or strategy by itself -- pre-registered
+wherever possible (the rules were committed before any outcome was looked at; the git history is the record). The consistent
+answer is that it doesn't: at the first touch, these levels hold or break about as often as not. That is exactly why Black
+Lantern presents them as decision points and leaves the direction to price's reaction.
 
 | question | result |
 |---|---|
@@ -95,11 +114,10 @@ record). Five questions, five honest answers:
 | Do prior-day UW levels improve a live auto-trader's signals (6,947 trades)? | **Not supported** (pre-registered, Holm-corrected). A level in the trade's path: +0.028R, wrong sign, p 0.65. Entry below the gamma flip: +0.054R, right sign in both halves but Holm p 0.51. |
 | Does UW's prior-day gamma regime tell you which setup to run (fade on positive gamma, breakout on negative)? | **Not supported** (pre-registered, 15,444 + 2,103 trades, 61/62 and 47/48 regime stretches). Fades: +0.069R on positive-gamma days, placebo ~0, but Holm p 0.24 and the effect vanished in the second half. Breakouts: wrong sign. Picking a setup by regime gave up more than half the total R versus running both. |
 
-Reading these plainly: the data is accurate and well covered, and it is a genuinely good map of where size traded and where
-dealer hedging is concentrated. In these tests it did not, on its own, tell you which way price goes next or which setup to
-run today. "No detectable
-effect" is not proof of none -- every study states the effect size it could have detected -- but it is the honest answer
-from this sample.
+Taken together: the data is accurate and well covered, and it is a genuinely good map of where size traded and where dealer
+hedging is concentrated -- the places worth watching. It does not, on its own, say which way price goes next or which
+strategy to run today; the reaction at the level does. ("No detectable effect" is not proof of none -- each study states the
+effect size it could have detected.)
 
 <details>
 <summary><b>Study 1 -- confluence reaction (event study)</b></summary>
@@ -215,7 +233,7 @@ python -m compare.run flow --dates 2026-09-16,2026-09-18   # daily options-flow 
 - `src/chart.py` -- the chart: `build_chart` (data) and an inline-SVG renderer; `src/report.py` -- the HTML report.
 - `src/demo.py` -- the seeded synthetic session behind `python main.py demo`.
 - `research/`, `compare/` -- the studies above.
-- `tests/` -- 226 tests against synthetic fixtures in the real response shapes; no API key needed (`pytest`).
+- `tests/` -- 227 tests against synthetic fixtures in the real response shapes; no API key needed (`pytest`).
 
 ## Data terms
 

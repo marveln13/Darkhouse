@@ -211,7 +211,9 @@ def render_chart_svg(chart, width=960, height=440):
               '<span><i class="sw gexsw"></i>GEX wall / magnet (dashed), flip (dotted)</span>'
               '<span><i class="sw blocksw"></i>Block print (area = $ notional)</span>'
               '<span><i class="sw upsw"></i><i class="sw downsw"></i>Candle: hollow = up, filled = down</span></div>')
-    return (f'<div class="chartwrap">{legend}<div class="readout" aria-live="polite"></div>{"".join(parts)}'
+    howto = ('<p class="howto">Levels mark where to watch the reaction and where risk is defined -- '
+             'not which way price will go.</p>')
+    return (f'<div class="chartwrap">{legend}{howto}<div class="readout" aria-live="polite"></div>{"".join(parts)}'
             f'<p class="note">{" ".join(notes)}</p>{script}</div>')
 
 
@@ -248,6 +250,7 @@ background:repeating-linear-gradient(45deg,var(--conf) 0 2px,transparent 2px 5px
 .upsw{width:7px;height:12px;border:1.5px solid var(--up);border-radius:1px;margin-right:3px}
 .downsw{width:7px;height:12px;background:var(--down);border-radius:1px}
 .readout{min-height:20px;font:13px ui-monospace,monospace;color:var(--muted)}
+.howto{margin:0 0 4px;font-size:13px;color:var(--ink);font-style:italic}
 """
 
 # Tokens the chart CSS reads from the report page; repeated here so a standalone SVG file renders on its own.
