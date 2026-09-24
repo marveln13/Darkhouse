@@ -1,5 +1,5 @@
 """
-The Black Lantern chart: one session's candles with the dark-pool levels, the GEX structure and the block prints drawn
+The Darkhouse chart: one session's candles with the dark-pool levels, the GEX structure and the block prints drawn
 on top, so "where did big money trade" and "where do dealers have to hedge" are visible against price in one picture.
 
 Pure functions, no network: `build_chart` turns parsed models into a plain dict of drawable items (unit-testable as

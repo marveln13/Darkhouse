@@ -1,20 +1,22 @@
-# Black Lantern
+# Darkhouse
 
-**Where big money traded, where dealers have to hedge, and what price did about it -- on one chart.**
+**A lighthouse for dark pools and gamma exposure.**
+
+Where big money traded, where dealers have to hedge, and what price did about it -- on one chart.
 
 Built on the [Unusual Whales public API](https://api.unusualwhales.com/docs) for **UW Hackathon #1**.
 
-Black Lantern pulls a ticker's dark-pool prints and dark-pool price levels, its dealer gamma (GEX) structure and its
+Darkhouse pulls a ticker's dark-pool prints and dark-pool price levels, its dealer gamma (GEX) structure and its
 intraday candles from Unusual Whales, and draws them together: the heaviest dark-pool levels and the call wall / put wall
 / gamma flip / gamma magnet as lines on the price chart, block prints as circles sized by dollar value, and the places where
 a heavy dark-pool level sits right on a GEX level highlighted. By default the levels come from the **prior** session, so the
 chart shows what was actually known going into the day, not a hindsight overlay.
 
-**Black Lantern is a map of where the decisions are** -- the levels where size traded and where dealers have to hedge --
+**Darkhouse is a map of where the decisions are** -- the levels where size traded and where dealers have to hedge --
 so you know where to watch the reaction, where your risk is defined, and when to change your mind. The design is backed by
 five studies on the data itself (below).
 
-![Black Lantern chart (synthetic demo data)](docs/demo_chart.svg)
+![Darkhouse chart (synthetic demo data)](docs/demo_chart.svg)
 
 *The image above is the built-in demo, generated from synthetic data -- no real market data is committed to this repo
 (Unusual Whales data is personal-use only).*
@@ -103,7 +105,7 @@ Unusual Whales data was checked against independent sources before anything was 
 Five studies looked at how price and trades behave around this data -- pre-registered wherever possible (the rules were
 committed before any outcome was looked at; the git history is the record). The consistent finding: at the first touch,
 these levels hold or break about as often as each other, and the flow and regime readings did not select direction or
-strategy by themselves. That is why Black Lantern marks levels as decision points and lets price's reaction at the level
+strategy by themselves. That is why Darkhouse marks levels as decision points and lets price's reaction at the level
 carry the information.
 
 | question | result |

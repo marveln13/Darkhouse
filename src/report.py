@@ -9,7 +9,7 @@ from html import escape
 
 from .chart import CHART_CSS
 
-BRAND = "Black Lantern"
+BRAND = "Darkhouse"
 
 GEX_LABELS = {
     "call_wall": "Call wall",

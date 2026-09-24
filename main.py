@@ -1,5 +1,5 @@
 """
-Black Lantern -- dark pool + GEX scanner on the Unusual Whales API. CLI entry point.
+Darkhouse -- a lighthouse for dark pools and gamma exposure, on the Unusual Whales API. CLI entry point.
 Usage:
     python main.py demo [--out reports/demo.html] [--open]          # no API key needed (synthetic data)
     python main.py scan SPY [--date YYYY-MM-DD] [--html out.html] [--open] [--candle-size 5m] [--same-day-levels]
@@ -91,7 +91,7 @@ def cmd_scan(args):
     confluence = analysis.price_level_confluence(levels, gex_data)
     bias = analysis.flow_bias(alerts)
 
-    print(f"\n=== {args.ticker} -- Black Lantern scan, session {day} ===\n")
+    print(f"\n=== {args.ticker} -- Darkhouse scan, session {day} ===\n")
     print(f"Levels from {levels_date}{note}")
     print(f"GEX ({gex_data.source}): call_wall={gex_data.call_wall}  put_wall={gex_data.put_wall}  "
           f"gamma_flip={gex_data.gamma_flip}  gamma_magnet={gex_data.gamma_magnet}")
@@ -157,7 +157,7 @@ def cmd_recent(args):
 
 
 def main():
-    parser = argparse.ArgumentParser(description="Black Lantern -- Unusual Whales dark pool + GEX scanner")
+    parser = argparse.ArgumentParser(description="Darkhouse -- a lighthouse for dark pools and gamma exposure (Unusual Whales API)")
     sub = parser.add_subparsers(dest="command", required=True)
 
     scan = sub.add_parser("scan", help="Scan a single ticker")

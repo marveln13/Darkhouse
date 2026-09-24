@@ -1,5 +1,5 @@
 """
-Synthetic demo session -- `python main.py demo` renders the full Black Lantern report with no API key.
+Synthetic demo session -- `python main.py demo` renders the full Darkhouse report with no API key.
 
 Every number here is generated (seeded, so the page is identical on every run) in the SAME raw shape the Unusual
 Whales API returns, and goes through the real parsers and analysis, so the demo exercises the real code path. It is

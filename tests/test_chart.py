@@ -150,7 +150,7 @@ def test_scan_writes_a_chart_with_prior_session_levels(fake_client, monkeypatch,
     printed = capsys.readouterr().out
     assert "session 2026-09-18" in printed and "Levels from 2026-09-17" in printed
     page = out.read_text(encoding="utf-8")
-    assert "Black Lantern" in page and "<svg" in page and "prior session" in page
+    assert "Darkhouse" in page and "<svg" in page and "prior session" in page
     level_dates = {p.get("date") for path, p in fake_client.calls if path.endswith("/price-levels")}
     assert level_dates == {"2026-09-17"}                        # never the session's own date
 
