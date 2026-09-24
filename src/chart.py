@@ -20,6 +20,7 @@ TOP_N_DARK_POOL = 5          # same "heavy level" selection as research/levels.p
 MIN_REACH_PCT = 0.25         # a level is drawn if it lies within one session range (at least this % of price)
                              # beyond the session high/low; farther levels go in the margin note, not on the chart
 BLOCK_R_MIN, BLOCK_R_MAX = 3.0, 14.0
+CONFLUENCE_MIN_HEIGHT = 12     # px; hatched confluence bands never shrink below this
 
 
 def _ts(value):
@@ -126,7 +127,11 @@ def render_chart_svg(chart, width=960, height=440):
         return top + (y1 - p) / (y1 - y0) * ph
 
     parts = [f'<svg viewBox="0 0 {width} {height}" role="img" aria-label="Price with dark-pool and GEX levels" '
-             f'class="bl-chart" preserveAspectRatio="xMidYMid meet">']
+             f'class="bl-chart" preserveAspectRatio="xMidYMid meet">',
+             # Confluence is marked by a PATTERN, not colour alone (readable with red-green colour blindness).
+             '<defs><pattern id="bl-hatch" width="8" height="8" patternUnits="userSpaceOnUse" '
+             'patternTransform="rotate(45)"><rect class="hatchbg" width="8" height="8"/>'
+             '<line class="hatch" x1="0" y1="0" x2="0" y2="8"/></pattern></defs>']
 
     for k in range(6):                                                   # price grid + axis labels
         p = y0 + (y1 - y0) * k / 5
@@ -145,7 +150,10 @@ def render_chart_svg(chart, width=960, height=440):
         cls = "dp conf" if lv["confluence"] else "dp"
         tip = (f'{"Confluence: " if lv["confluence"] else ""}dark-pool level ${lv["price"]:,.2f} -- '
                f'{lv["volume"]:,} shares ({lv["share_pct"]}% dark)')
-        parts.append(f'<rect class="{cls}" x="{left}" y="{y - h / 2:.1f}" width="{pw}" height="{h:.1f}">'
+        if lv["confluence"]:
+            h = max(h, CONFLUENCE_MIN_HEIGHT)                            # tall enough for the hatching to show
+        fill = ' fill="url(#bl-hatch)"' if lv["confluence"] else ""
+        parts.append(f'<rect class="{cls}" x="{left}" y="{y - h / 2:.1f}" width="{pw}" height="{h:.1f}"{fill}>'
                      f'<title>{escape(tip)}</title></rect>')
         labels.append((y, f'DP ${lv["price"]:,.2f}{" *" if lv["confluence"] else ""}', cls))
     for g in chart["gex"]:
@@ -199,41 +207,53 @@ def render_chart_svg(chart, width=960, height=440):
     if chart["blocks_outside"]:
         notes.append(f'{chart["blocks_outside"]} block print(s) outside regular-session candles not drawn.')
     legend = ('<div class="legend"><span><i class="sw dpsw"></i>Dark-pool level (thicker = more volume)</span>'
-              '<span><i class="sw confsw"></i>Dark-pool level within 0.1% of a GEX level (*)</span>'
-              '<span><i class="sw gexsw"></i>GEX wall / flip / magnet</span>'
-              '<span><i class="sw blocksw"></i>Block print (area = $ notional)</span></div>')
+              '<span><i class="sw confsw"></i>Hatched: dark-pool level within 0.1% of a GEX level (*)</span>'
+              '<span><i class="sw gexsw"></i>GEX wall / magnet (dashed), flip (dotted)</span>'
+              '<span><i class="sw blocksw"></i>Block print (area = $ notional)</span>'
+              '<span><i class="sw upsw"></i><i class="sw downsw"></i>Candle: hollow = up, filled = down</span></div>')
     return (f'<div class="chartwrap">{legend}<div class="readout" aria-live="polite"></div>{"".join(parts)}'
             f'<p class="note">{" ".join(notes)}</p>{script}</div>')
 
 
 CHART_CSS = """
-:root{--up:#15803d;--down:#b91c1c;--dp:#3b6fd4;--conf:#7c3aed;--blk:#d97706;--grid:#e6e9ef}
-@media (prefers-color-scheme:dark){:root{--up:#4ade80;--down:#f87171;--dp:#6b9bf5;--conf:#c084fc;--blk:#fbbf24;--grid:#252b35}}
+/* Okabe-Ito colour-blind-safe palette (blue / orange axis), and every distinction also carried by shape or pattern:
+   hollow vs filled candles, hatched confluence bands, dashed vs dotted GEX lines. */
+:root{--up:#0072b2;--down:#d55e00;--dp:#56b4e9;--dptext:#005a8c;--conf:#e69f00;--conftext:#8a5a00;--blk:#cc79a7;
+--gexline:#3b4250;--grid:#e6e9ef;--cardbg:#fff}
+@media (prefers-color-scheme:dark){:root{--up:#56b4e9;--down:#f07a2e;--dp:#56b4e9;--dptext:#8fd0f5;--conf:#f0b429;
+--conftext:#f5c75a;--blk:#e28fc0;--gexline:#c9ced8;--grid:#252b35;--cardbg:#171b22}}
 .chartwrap{position:relative;overflow-x:auto}
 .bl-chart{width:100%;min-width:680px;height:auto;display:block;font:11px system-ui,sans-serif}
 .bl-chart .grid{stroke:var(--grid);stroke-width:1}
 .bl-chart .axis{fill:var(--muted)}
 .bl-chart .wick{stroke-width:1}.bl-chart .wick.up{stroke:var(--up)}.bl-chart .wick.down{stroke:var(--down)}
-.bl-chart .body.up{fill:var(--up)}.bl-chart .body.down{fill:var(--down)}
-.bl-chart .dp{fill:var(--dp);opacity:.28}.bl-chart .dp.conf{fill:var(--conf);opacity:.45}
-.bl-chart .gex{stroke:var(--gex);stroke-width:1.5;stroke-dasharray:6 4}
-.bl-chart .gex.gamma_flip{stroke-dasharray:2 3;stroke-width:2}
-.bl-chart .block{fill:var(--blk);fill-opacity:.35;stroke:var(--blk);stroke-width:1.2}
+.bl-chart .body.up{fill:var(--cardbg);stroke:var(--up);stroke-width:1.2}.bl-chart .body.down{fill:var(--down);stroke:var(--down);stroke-width:1}
+.bl-chart rect.dp{fill:var(--dp);opacity:.35}
+.bl-chart rect.dp.conf{fill:url(#bl-hatch);opacity:1;stroke:var(--conf);stroke-width:1.5}
+.bl-chart .hatchbg{fill:var(--conf);opacity:.25}.bl-chart .hatch{stroke:var(--conf);stroke-width:3.5}
+.bl-chart .gex{stroke:var(--gexline);stroke-width:1.5;stroke-dasharray:7 4}
+.bl-chart .gex.gamma_flip{stroke-dasharray:1.5 3.5;stroke-width:2.5;stroke-linecap:round}
+.bl-chart .block{fill:var(--blk);fill-opacity:.3;stroke:var(--blk);stroke-width:1.5}
 .bl-chart .lbl{fill:var(--ink);font-size:11px}
-.bl-chart .lbl.dp{fill:var(--dp);opacity:1}.bl-chart .lbl.conf{fill:var(--conf)}
-.bl-chart .gexlabel{fill:var(--gex)}
+.bl-chart .lbl.dp{fill:var(--dptext);opacity:1}.bl-chart .lbl.conf{fill:var(--conftext);font-weight:700}
+.bl-chart .gexlabel{fill:var(--gexline);font-weight:600}
 .bl-chart .xhair{stroke:var(--muted);stroke-width:1;stroke-dasharray:3 3}
 .legend{display:flex;flex-wrap:wrap;gap:6px 16px;font-size:13px;color:var(--muted);margin-bottom:6px}
 .sw{display:inline-block;width:14px;height:8px;margin-right:6px;vertical-align:middle;border-radius:2px}
-.dpsw{background:var(--dp);opacity:.5}.confsw{background:var(--conf);opacity:.7}
-.gexsw{border-top:2px dashed var(--gex);height:0}.blocksw{background:var(--blk);opacity:.6;border-radius:50%;width:10px;height:10px}
+.dpsw{background:var(--dp);opacity:.6}
+.confsw{height:10px;border:1.5px solid var(--conf);
+background:repeating-linear-gradient(45deg,var(--conf) 0 2px,transparent 2px 5px)}
+.gexsw{border-top:2px dashed var(--gexline);height:0}
+.blocksw{background:var(--blk);opacity:.7;border-radius:50%;width:10px;height:10px}
+.upsw{width:7px;height:12px;border:1.5px solid var(--up);border-radius:1px;margin-right:3px}
+.downsw{width:7px;height:12px;background:var(--down);border-radius:1px}
 .readout{min-height:20px;font:13px ui-monospace,monospace;color:var(--muted)}
 """
 
 # Tokens the chart CSS reads from the report page; repeated here so a standalone SVG file renders on its own.
 _STANDALONE_TOKENS = """
-svg{--ink:#14181f;--muted:#5d6675;--gex:#c2410c;background:#fff}
-@media (prefers-color-scheme:dark){svg{--ink:#e8ebf0;--muted:#98a2b3;--gex:#fb923c;background:#171b22}}
+svg{--ink:#14181f;--muted:#5d6675;background:#fff}
+@media (prefers-color-scheme:dark){svg{--ink:#e8ebf0;--muted:#98a2b3;background:#171b22}}
 """
 
 

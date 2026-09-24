@@ -43,13 +43,15 @@ session's own end-of-day levels instead -- labelled as hindsight on the chart).
 
 | on the chart | what it is | from |
 |---|---|---|
-| candles | the session's regular-hours price | `ohlc/{candle_size}` |
-| blue bands | the 5 heaviest dark-pool price levels of the prior session; thicker = more dark-pool volume | `darkpool/{ticker}/price-levels` |
-| purple bands, marked `*` | a heavy dark-pool level within 0.1% of a GEX level (confluence) | both of the above |
-| dashed lines | call wall, put wall, gamma magnet; dotted = gamma flip | `stock/{ticker}/gex-levels` |
+| candles | the session's regular-hours price; **hollow = up, filled = down** | `ohlc/{candle_size}` |
+| light-blue bands | the 5 heaviest dark-pool price levels of the prior session; thicker = more dark-pool volume | `darkpool/{ticker}/price-levels` |
+| **hatched** orange bands, marked `*` | a heavy dark-pool level within 0.1% of a GEX level (confluence) | both of the above |
+| dark dashed lines | call wall, put wall, gamma magnet; dotted = gamma flip | `stock/{ticker}/gex-levels` |
 | circles | dark-pool block prints at their time and price; area = dollar notional | `darkpool/{ticker}` |
 
-Levels more than one session-range away from the day's high/low are listed under the chart instead of squashing it. Below
+The chart is colour-blind safe: it uses the Okabe-Ito palette (a blue / orange axis that survives red-green colour
+blindness), and every distinction is also carried by shape or pattern -- hollow vs filled candles, hatched confluence
+bands, dashed vs dotted GEX lines -- so nothing depends on colour alone. Levels more than one session-range away from the day's high/low are listed under the chart instead of squashing it. Below
 the chart the report adds the full dark-pool ladder, the top net-gamma strikes, the confluence table, the block-print list
 and the options-flow premium tilt.
 
@@ -213,7 +215,7 @@ python -m compare.run flow --dates 2026-09-16,2026-09-18   # daily options-flow 
 - `src/chart.py` -- the chart: `build_chart` (data) and an inline-SVG renderer; `src/report.py` -- the HTML report.
 - `src/demo.py` -- the seeded synthetic session behind `python main.py demo`.
 - `research/`, `compare/` -- the studies above.
-- `tests/` -- 222 tests against synthetic fixtures in the real response shapes; no API key needed (`pytest`).
+- `tests/` -- 226 tests against synthetic fixtures in the real response shapes; no API key needed (`pytest`).
 
 ## Data terms
 

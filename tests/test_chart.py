@@ -251,3 +251,34 @@ def test_standalone_svg_is_self_contained():
     svg = chart.standalone_svg(c)
     assert svg.startswith('<svg xmlns="http://www.w3.org/2000/svg" width="960" height="440"') and svg.endswith("</svg>")
     assert "<style>" in svg and "<script" not in svg and "--dp:" in svg
+
+
+# ---- colour-blind safety: every distinction also carried by shape or pattern ----
+
+def test_confluence_bands_are_hatched_and_never_too_thin_to_show_it():
+    c = chart.build_chart(CANDLES, _levels((100.2, 1), (101.0, 900)), _gex(gamma_flip=100.2), [], [{"price": 100.2}])
+    html = chart.render_chart_svg(c)
+    assert '<pattern id="bl-hatch"' in html
+    conf = [part for part in html.split("<rect") if 'class="dp conf"' in part]
+    assert len(conf) == 1 and 'fill="url(#bl-hatch)"' in conf[0]
+    height = float(conf[0].split('height="')[1].split('"')[0])
+    assert height >= chart.CONFLUENCE_MIN_HEIGHT             # the lightest level still gets a readable hatched band
+    assert "fill:url(#bl-hatch)" in chart.CHART_CSS          # CSS must not override the pattern with a flat colour
+
+
+def test_band_styles_do_not_leak_onto_labels():
+    assert "rect.dp{" in chart.CHART_CSS and "rect.dp.conf{" in chart.CHART_CSS
+    assert ".bl-chart .dp{" not in chart.CHART_CSS and ".bl-chart .dp.conf{" not in chart.CHART_CSS
+
+
+def test_up_candles_are_hollow_and_down_candles_filled():
+    css = chart.CHART_CSS
+    assert ".body.up{fill:var(--cardbg);stroke:var(--up)" in css and ".body.down{fill:var(--down)" in css
+    html = chart.render_chart_svg(chart.build_chart(CANDLES + [_candle(3, 101.4, 101.5, 100.9, 101.0)],
+                                                    _levels((100, 1)), _gex(), [], []))
+    assert 'class="body up"' in html and 'class="body down"' in html
+
+
+def test_palette_avoids_red_green_pairs():
+    assert "#15803d" not in chart.CHART_CSS and "#b91c1c" not in chart.CHART_CSS      # the old green / red candles
+    assert "#7c3aed" not in chart.CHART_CSS                                            # the old purple confluence

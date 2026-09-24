@@ -20,9 +20,9 @@ GEX_LABELS = {
 
 _CSS = """
 :root{--bg:#f6f7f9;--card:#fff;--ink:#14181f;--muted:#5d6675;--line:#dfe3ea;
---bar:#3b6fd4;--gex:#c2410c;--good:#15803d;--bad:#b91c1c}
+--bar:#3b6fd4;--gex:#c2410c;--good:#0072b2;--bad:#d55e00}
 @media (prefers-color-scheme:dark){:root{--bg:#0e1116;--card:#171b22;--ink:#e8ebf0;
---muted:#98a2b3;--line:#2a313c;--bar:#6b9bf5;--gex:#fb923c;--good:#4ade80;--bad:#f87171}}
+--muted:#98a2b3;--line:#2a313c;--bar:#6b9bf5;--gex:#fb923c;--good:#56b4e9;--bad:#f07a2e}}
 *{box-sizing:border-box}
 body{margin:0;background:var(--bg);color:var(--ink);font:15px/1.5 system-ui,sans-serif}
 main{max-width:920px;margin:0 auto;padding:24px 16px 48px}
