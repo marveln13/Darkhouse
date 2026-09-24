@@ -1,3 +1,4 @@
+# Darkhouse -- runtime and test dependencies
 requests>=2.31
 python-dotenv>=1.0
 numpy>=1.26

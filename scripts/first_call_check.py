@@ -1,5 +1,5 @@
 """
-First live-call check: hits each endpoint once and reports the things the
+Darkhouse first live-call check: hits each endpoint once and reports the things the
 docs left open, so they are settled in one run instead of discovered as bugs.
 
     python -m scripts.first_call_check [TICKER]
