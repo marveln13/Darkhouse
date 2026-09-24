@@ -284,6 +284,6 @@ def test_palette_avoids_red_green_pairs():
     assert "#7c3aed" not in chart.CHART_CSS                                            # the old purple confluence
 
 
-def test_chart_frames_levels_as_decision_points_not_predictions():
+def test_chart_frames_levels_as_decision_points():
     html = chart.render_chart_svg(chart.build_chart(CANDLES, _levels((100, 1)), _gex(), [], []))
-    assert "where to watch the reaction" in html and "not which way price will go" in html
+    assert "where to watch the reaction and where risk is defined" in html

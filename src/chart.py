@@ -211,8 +211,7 @@ def render_chart_svg(chart, width=960, height=440):
               '<span><i class="sw gexsw"></i>GEX wall / magnet (dashed), flip (dotted)</span>'
               '<span><i class="sw blocksw"></i>Block print (area = $ notional)</span>'
               '<span><i class="sw upsw"></i><i class="sw downsw"></i>Candle: hollow = up, filled = down</span></div>')
-    howto = ('<p class="howto">Levels mark where to watch the reaction and where risk is defined -- '
-             'not which way price will go.</p>')
+    howto = '<p class="howto">Levels mark where to watch the reaction and where risk is defined.</p>'
     return (f'<div class="chartwrap">{legend}{howto}<div class="readout" aria-live="polite"></div>{"".join(parts)}'
             f'<p class="note">{" ".join(notes)}</p>{script}</div>')
 
